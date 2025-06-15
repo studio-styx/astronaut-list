@@ -1,6 +1,6 @@
 import settings from "../../settings.json" with { type: "json" };
 import { envSchema } from "./env.schema.js";
-import blackList from "../../blackList.json" with { type: "json" };
+import blackList from "../../blacklist.json" with { type: "json" };
 import "./global.js";
 import { logger } from "./logger.js";
 import { validateEnv } from "./env.validate.js";
