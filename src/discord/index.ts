@@ -47,7 +47,7 @@ export const { createCommand, createEvent, createResponder } = setupCreators({
                 return;
             }
 
-            store.set(interaction.user.id, new Date(Date.now() + 10000), { time: 10000 });
+            store.set(interaction.user.id, new Date(Date.now() + 6000), { time: 6000 });
         },
     },
     responders: {
@@ -62,6 +62,7 @@ export const { createCommand, createEvent, createResponder } = setupCreators({
         },
         async middleware(interaction, block) {
             const { user } = interaction;
+            
             if (onlyAdmin) {
                 if (!settings.admins.includes(user.id)) {
                     interaction.reply(res.danger("O bot está em manutenção! tente novamente mais tarde!"));
@@ -79,6 +80,15 @@ export const { createCommand, createEvent, createResponder } = setupCreators({
                 block();
                 return;
             }
+
+            const storedDate = store.get(interaction.user.id);
+            if (store.has(interaction.user.id)) {
+                interaction.reply(res.danger(`Acalme-se, você está sendo muito rápido! volte novamente em <t:${Math.floor(Number(storedDate) / 1000)}:R>`));
+                block();
+                return;
+            }
+
+            store.set(interaction.user.id, new Date(Date.now() + 6000), { time: 6000 });
         },
     }
 });

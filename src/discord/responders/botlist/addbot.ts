@@ -1,7 +1,7 @@
 import { createResponder, ResponderType } from "#base";
 import { prisma } from "#database";
 import { clearBotInfo, res } from "#functions";
-import { ButtonBuilder, ButtonStyle, MessageFlags, roleMention, StringSelectMenuBuilder, TextInputStyle } from "discord.js";
+import { ButtonBuilder, ButtonStyle, MessageFlags, roleMention, StringSelectMenuBuilder, TextInputStyle, userMention } from "discord.js";
 import { brBuilder, createContainer, createEmbed, createModalFields, createRow, createSection, createSeparator } from "@magicyan/discord";
 import { getBotInfo, setBotInfo } from "#functions";
 import { settings } from "#settings";
@@ -331,7 +331,17 @@ createResponder({
 
                 const botDiscordInfo = await interaction.client.users.fetch(botInfo.id || '').catch(() => null);
 
+                if (!botDiscordInfo) {
+                    interaction.editReply(res.danger("A aplicação não foi encontrada! talvez você tenha enviado o id errado", { components: [] }));
+                    return;
+                }
+                if (botDiscordInfo.bot === false) {
+                    interaction.editReply(res.danger("O ID fornecido não é de um bot!", { components: [] }));
+                    return;
+                }
+
                 const channel = interaction.client.channels.cache.get(settings.guild.solicitations) as any;
+                const mailChannel = interaction.client.channels.cache.get(settings.guild.requests) as any;
 
                 const container = createContainer({
                     accentColor: settings.colors.success,
@@ -369,19 +379,7 @@ createResponder({
                         style: ButtonStyle.Link
                     }),
                 )
-
-                channel.send({
-                    components: [container, component],
-                    flags: MessageFlags.IsComponentsV2
-                })
-
-                const embed = createEmbed({
-                    title: "Adicionar Aplicação",
-                    description: "Aplicação enviada com sucesso!",
-                    color: settings.colors.success,
-                    timestamp: new Date().toISOString(),
-                })
-
+                
                 const alreadyExisting = await prisma.application.findUnique({
                     where: {
                         id: botInfo.id!,
@@ -394,28 +392,60 @@ createResponder({
                     return;
                 }
 
-                await prisma.user.upsert({
-                    where: {
-                        id: interaction.user.id,
-                    },
-                    update: {},
-                    create: {
-                        id: interaction.user.id,
-                    }
+                channel.send({
+                    content: roleMention("1374888824777474098"),
+                    components: [container, component],
+                    flags: MessageFlags.IsComponentsV2
                 })
 
-                await prisma.application.create({
-                    data: {
-                        id: botInfo.id!,
-                        userId: interaction.user.id,
-                        name: botDiscordInfo?.username!,
-                        prefix: botInfo.prefix!,
-                        prefix2: botInfo.prefix2!,
-                        description: botInfo.description,
-                        language: botInfo.language!,
-                        lib: botInfo.lib!,
-                    }
+                const mailEmbed = createEmbed({
+                    title: "Nova aplicação",
+                    description: brBuilder(
+                        `Nova aplicação enviada por <@${interaction.user.id}>`,
+                        `**Nome:** \`${botDiscordInfo?.displayName || "Não encontrado"}\``,
+                        botInfo.description ? `**Descrição:** \`${botInfo.description}\`` : null,
+                        `Agora ele espera a analise do bot!`,
+                    ),
+                    thumbnail: botDiscordInfo?.displayAvatarURL() || interaction.user.avatarURL(),
+                    timestamp: new Date().toISOString(),
+                    color: settings.colors.success,
                 })
+
+                mailChannel.send({
+                    content: userMention(interaction.user.id),
+                    embeds: [mailEmbed]
+                })
+
+                const embed = createEmbed({
+                    title: "Adicionar Aplicação",
+                    description: "Aplicação enviada com sucesso!",
+                    color: settings.colors.success,
+                    timestamp: new Date().toISOString(),
+                })
+
+                await prisma.$transaction([
+                    prisma.user.upsert({
+                        where: {
+                            id: interaction.user.id,
+                        },
+                        update: {},
+                        create: {
+                            id: interaction.user.id,
+                        }
+                    }),
+                    prisma.application.create({
+                        data: {
+                            id: botInfo.id!,
+                            userId: interaction.user.id,
+                            name: botDiscordInfo?.username!,
+                            prefix: botInfo.prefix!,
+                            prefix2: botInfo.prefix2!,
+                            description: botInfo.description,
+                            language: botInfo.language!,
+                            lib: botInfo.lib!,
+                        }
+                    })
+                ])
 
                 interaction.editReply({
                     embeds: [embed],
