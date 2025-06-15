@@ -1,0 +1,72 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String @id
+  applications Application[]
+  blacklist   Boolean @default(false)
+  defaultVote String?
+  isAvaliator Boolean @default(false)
+  createdAt   DateTime @default(now())
+  cooldowns   Cooldown[]
+  analising   String?
+  annotations Annotation[]
+  coins       Int @default(0)
+}
+
+
+model Application {
+  id          String @id
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+  name        String
+  votes       Int @default(0)
+  avaliation  String?
+  language    String
+  lib         String
+  description String?
+  prefix      String
+  prefix2     String?
+  createdAt   DateTime @default(now())
+  annotations Annotation[]
+}
+
+model Cooldown {
+  id          Int @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  createdAt   DateTime @default(now())
+  endIn   DateTime
+
+  @@unique([userId, name])
+}
+
+model Annotation {
+  id          Int @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  applicationId String
+  application Application @relation(fields: [applicationId], references: [id])
+  type        String
+  text        String
+  createdAt   DateTime @default(now())
+}
+
+model VoteReminder {
+  userId      String
+  channelId   String
+  guildId     String
+  endTime     DateTime
+  
+  @@id([userId, channelId, guildId])
+  @@index([endTime])
+}
