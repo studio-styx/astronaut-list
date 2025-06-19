@@ -54,13 +54,13 @@ export default async function cancelAnalise(interaction: ChatInputCommandInterac
         })
     ]);
 
-    const channelId = settings.guild.requests;
+    const channelId = settings.guild.channels.requests;
 
-    const channel = await interaction.guild.channels.fetch(channelId);
+    const channel = await interaction.client.channels.fetch(channelId);
 
     const botUser = await interaction.client.users.fetch(user.analising);
 
-    if (channel?.isTextBased() && bot) channel.send(res.danger(`${interaction.user} cancelou a analise de <@${user.analising}>`, { thumbnail: botUser?.displayAvatarURL(), content: userMention(bot.userId) }))
+    if (channel?.isTextBased() && bot && 'send' in channel) channel.send(res.danger(`${interaction.user} cancelou a analise de <@${user.analising}>`, { thumbnail: botUser?.displayAvatarURL(), content: userMention(bot.userId) }))
 
     await interaction.editReply(res.danger("Analise cancelada!"));
 }

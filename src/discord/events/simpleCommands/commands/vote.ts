@@ -15,7 +15,20 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
 
     store.set(message.author.id, new Date(Date.now() + 6000), { time: 6000 });
 
-    const botarg = args[0];
+    const user = await prisma.user.upsert({
+        where: {
+            id: message.author.id
+        },
+        create: {
+            id: message.author.id
+        },
+        update: {},
+        include: {
+            cooldowns: true
+        }
+    });
+
+    const botarg = args[0] || user.defaultVote;
     
     if (!botarg) {
         message.reply(res.danger("Você precisa mencionar um bot!"));
@@ -32,19 +45,6 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
     }
 
     message.channel.sendTyping();
-
-    const user = await prisma.user.upsert({
-        where: {
-            id: message.author.id
-        },
-        create: {
-            id: message.author.id
-        },
-        update: {},
-        include: {
-            cooldowns: true
-        }
-    });
 
     const now = new Date();
     const cooldown = user.cooldowns.find(cooldown => cooldown.name === "vote");
@@ -145,7 +145,7 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
         })
     )
 
-    const channel = await message.client.channels.fetch(settings.guild.mail)
+    const channel = await message.client.channels.fetch(settings.guild.channels.vote)
     
     if (!channel || !channel.isTextBased()) {
         message.reply(res.danger("Não foi possível enviar a notificação nos correios, "));

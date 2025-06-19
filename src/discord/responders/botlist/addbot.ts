@@ -346,6 +346,8 @@ createResponder({
                 const container = createContainer({
                     accentColor: settings.colors.success,
                     components: [
+                        roleMention("1374888824777474098"),
+                        createSeparator(),
                         `### Nova aplicação`,
                         brBuilder(
                             `**Dono do bot:** <@${interaction.user.id}>`,
@@ -393,7 +395,6 @@ createResponder({
                 }
 
                 channel.send({
-                    content: roleMention("1374888824777474098"),
                     components: [container, component],
                     flags: MessageFlags.IsComponentsV2
                 })

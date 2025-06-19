@@ -53,7 +53,6 @@ createCommand({
                     name: "bot",
                     description: "bot que deseja votar",
                     type: ApplicationCommandOptionType.String,
-                    required: true,
                     autocomplete: true
                 }
             ]
@@ -182,12 +181,7 @@ createCommand({
                     return;
                 }
 
-                let botId
-                if (interaction.options.getString("bot")) {
-                    botId = interaction.options.getString("bot");
-                } else if (user.defaultVote) {
-                    botId = user.defaultVote;
-                }
+                const botId = interaction.options.getString("bot") || user.defaultVote;
                 if (!botId) {
                     interaction.editReply(res.danger(`Você não especificou nenhuma aplicação e nem tem alguma aplicação padrão, por favor escolha um bot na lista.`));
                     return;
@@ -271,7 +265,7 @@ createCommand({
                     })
                 )
 
-                const channel = await interaction.client.channels.fetch(settings.guild.mail)
+                const channel = await interaction.client.channels.fetch(settings.guild.channels.vote)
                 
                 if (!channel || !channel.isTextBased()) {
                     interaction.editReply(res.danger("Não foi possível enviar a notificação nos correios, "));

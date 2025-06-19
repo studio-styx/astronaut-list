@@ -2,6 +2,7 @@ import { prisma } from "#database";
 import { res } from "#functions";
 import { settings } from "#settings";
 import { ChatInputCommandInteraction, userMention } from "discord.js";
+import fs from "fs";
 
 export default async function startAnalise(interaction: ChatInputCommandInteraction<"cached">) {
     await interaction.deferReply();
@@ -67,13 +68,22 @@ export default async function startAnalise(interaction: ChatInputCommandInteract
             })
         ]);
 
-        const channelId = settings.guild.requests
+        const channelId = settings.guild.channels.requests;
 
-        const channel = await interaction.guild.channels.fetch(channelId);
+        const channel = await interaction.client.channels.fetch(channelId);
 
         const botAvatar = interaction.client.users.cache.get(bot.userId)?.avatarURL()
 
-        if (channel?.isTextBased()) channel.send(res.warning(`O analisador <@${interaction.user.id}> começou a analise do bot <@${bot.id}>. do usuário: <@${bot.userId}>`, { thumbnail: botAvatar, content: userMention(bot.userId) }));
+        if (channel?.isTextBased() && 'send' in channel) {
+            await channel.send(res.warning(`O analisador <@${interaction.user.id}> começou a analise do bot <@${bot.id}>. do usuário: <@${bot.userId}>`, { thumbnail: botAvatar, content: userMention(bot.userId) }));
+        }
+
+        const rootPath = `${process.cwd()}/threads.json`;
+        const preview = JSON.parse(fs.readFileSync(rootPath, "utf-8"));
+
+        preview[thread.id] = "1385246815531696199"
+
+        fs.writeFileSync(rootPath, JSON.stringify(preview, null, 4));
 
         return interaction.editReply(res.success(`Thread de análise criada em: ${thread.toString()}`));
 }

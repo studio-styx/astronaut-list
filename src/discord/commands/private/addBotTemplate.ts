@@ -38,7 +38,10 @@ createCommand({
                     > A aplicação só deve apresentar 5 Erros em sua análise! Para Erros Ortográficos São contados apenas 7! 
 
                     - 5. Raid:
-                    > A Aplicação não deve ser de raid ou ter participado de uma! Isto conta com o desenvolvedor Também! 
+                    > A Aplicação não deve ser de raid ou ter participado de uma! Isto conta com o desenvolvedor Também!
+
+                    - 6. Comandos:
+                    > A Aplicação deve ter no minimo 10 comandos!
 
                     # Requisitos Extras:
 
@@ -58,7 +61,7 @@ createCommand({
         )
 
         
-        const channel = await interaction.client.channels.fetch(settings.guild.addBot) as Channel;
+        const channel = await interaction.client.channels.fetch(settings.guild.channels.addBot) as Channel;
 
         if (!channel) {
             interaction.reply(res.danger("Não foi possivel encontrar o canal!"));
