@@ -76,7 +76,7 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
     const sandboxGuild = await interaction.client.guilds.fetch(settings.guild.sandboxId);
 
     if (approved) {
-        const [application] =await prisma.$transaction([
+        const [application] = await prisma.$transaction([
             prisma.application.update({
                 where: {
                     id: user.analising
@@ -93,21 +93,25 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
                     analising: null
                 }
             })
-        ])
-
-        const botUser = await principalGuild.members.fetch(user.analising);
-        const botOwner = await principalGuild.members.fetch(application.userId);
-
+        ]);
+    
         try {
-            await botUser.roles.add(settings.guild.roles.roleBotAprroved);
-            await botOwner.roles.add(settings.guild.roles.devRole)
-        } catch (e: any) {
-            console.log(e);
-            await interaction.client.channels.fetch(channelId).then(async channel => {
-                if (channel?.isTextBased() &&'send' in channel) {
-                    await channel.send(res.danger(`Não foi possível adicionar o cargo de bot aprovado ao bot <@${user.analising}> \`${e.message}\``));
-                }
-            })
+            const botUser = await principalGuild.members.fetch(user.analising).catch(() => null);
+            const botOwner = await principalGuild.members.fetch(application.userId).catch(() => null);
+    
+            if (botUser) {
+                await botUser.roles.add(settings.guild.roles.roleBotAprroved).catch(console.error);
+            } else {
+                console.log(`Bot ${user.analising} não encontrado no servidor principal`);
+            }
+    
+            if (botOwner) {
+                await botOwner.roles.add(settings.guild.roles.devRole).catch(console.error);
+            } else {
+                console.log(`Dono do bot ${application.userId} não encontrado no servidor principal`);
+            }
+        } catch (e) {
+            console.error("Erro ao adicionar cargos:", e);
         }
 
         await interaction.client.channels.fetch(channelId).then(async channel => {
@@ -152,24 +156,30 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
             }
         })
         try {
-            await sandboxGuild.members.kick(user.analising, "Bot reprovado");
-            await principalGuild.members.kick(user.analising, "Bot reprovado");
+            // Verificar se o bot está no sandbox antes de tentar expulsar
+            const sandboxMember = await sandboxGuild.members.fetch(user.analising).catch(() => null);
+            if (sandboxMember) {
+                await sandboxGuild.members.kick(user.analising, "Bot reprovado");
+            }
+
+            // Verificar se o bot está no servidor principal antes de tentar expulsar
+            const principalMember = await principalGuild.members.fetch(user.analising).catch(() => null);
+            if (principalMember) {
+                await principalGuild.members.kick(user.analising, "Bot reprovado");
+            }
         } catch (e) {
-            console.log(e);
-            await interaction.client.channels.fetch(channelId).then(async channel => {
-                if (channel?.isTextBased() && 'send' in channel) {
-                    await channel.send(res.danger(`Não foi possível expulsar o bot <@${user.analising}>`));
-                }
-            });
+            console.error("Erro ao expulsar bot:", e);
         }
     }
 
     try {
         const rootPath = `${process.cwd()}/threads.json`;
 
-        const thread = JSON.parse(fs.readFileSync(rootPath, "utf8"));
+        const thread: string[] = JSON.parse(fs.readFileSync(rootPath, "utf8"));
 
-        delete thread[channelId];
+        const index = thread.indexOf(channelId);
+
+        thread.splice(index, 1);
 
         fs.writeFileSync(rootPath, JSON.stringify(thread, null, 4));
     } catch (e) {

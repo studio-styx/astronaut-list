@@ -1,12 +1,9 @@
 import { createEvent } from "#base";
 import { settings } from "#settings";
-import { ChannelType, Interaction, Message, WebhookClient, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, APIEmbed, ComponentType, Client } from "discord.js";
+import { ChannelType, Interaction, Message, WebhookClient, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Client } from "discord.js";
 import { vote } from "./commands/vote.js";
 import fs from "fs";
 
-interface ThreadsData {
-    [key: string]: string;
-}
 
 interface CachedMessage {
     id: string;
@@ -39,9 +36,9 @@ async function processCache(channelId: string, client: Client) {
 
         // Obter as últimas mensagens do canal
         const messages = await thread.messages.fetch({ limit: 50 });
-        const data: ThreadsData = JSON.parse(fs.readFileSync(`${process.cwd()}/threads.json`, 'utf-8'));
-        const destinationThreadId = data[channelId];
-        if (!destinationThreadId) return;
+        const data: string[] = JSON.parse(fs.readFileSync(`${process.cwd()}/threads.json`, 'utf-8'));
+
+        if (!data.includes(thread.id)) return;
 
         // Processar mensagens do cache
         const uniqueCache = [...new Map(messageCache.map(item => [item.id, item])).values()]; // Remover duplicatas

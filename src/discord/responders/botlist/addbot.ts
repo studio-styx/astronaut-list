@@ -340,8 +340,8 @@ createResponder({
                     return;
                 }
 
-                const channel = interaction.client.channels.cache.get(settings.guild.solicitations) as any;
-                const mailChannel = interaction.client.channels.cache.get(settings.guild.requests) as any;
+                const channel = interaction.client.channels.cache.get(settings.guild.channels.solicitations) as any;
+                const mailChannel = interaction.client.channels.cache.get(settings.guild.channels.requests) as any;
 
                 const container = createContainer({
                     accentColor: settings.colors.success,

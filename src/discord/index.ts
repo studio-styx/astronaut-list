@@ -9,7 +9,7 @@ const store = new Store<Date>();
 
 export const { createCommand, createEvent, createResponder } = setupCreators({
     commands: {
-        // guilds: ["1322716137972039814", "1338980027529957396"],
+        guilds: ["1322716137972039814", "1338980027529957396", "1373806908149858334"],
         onError(error, interaction) {
             console.log(error);
 

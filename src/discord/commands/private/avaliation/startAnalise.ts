@@ -79,9 +79,9 @@ export default async function startAnalise(interaction: ChatInputCommandInteract
         }
 
         const rootPath = `${process.cwd()}/threads.json`;
-        const preview = JSON.parse(fs.readFileSync(rootPath, "utf-8"));
+        const preview: string[] = JSON.parse(fs.readFileSync(rootPath, "utf-8"));
 
-        preview[thread.id] = "1385246815531696199"
+        preview.push(thread.id);
 
         fs.writeFileSync(rootPath, JSON.stringify(preview, null, 4));
 
