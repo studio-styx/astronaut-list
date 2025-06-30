@@ -277,7 +277,7 @@ createCommand({
                             techChoices.length > 0
                                 ? techChoices.slice(0, 25).map(choice => ({
                                     name: choice.text,
-                                    value: choice.id
+                                    value: choice.id.toString()
                                 }))
                                 : [{ name: "Nenhum erro técnico encontrado", value: "none" }]
                         );
@@ -309,12 +309,24 @@ createCommand({
 
                         return interaction.respond(
                             ortChoices.length > 0
-                                ? ortChoices.slice(0, 25).map(choice => ({
-                                    name: choice.text,
-                                    value: choice.id
-                                }))
+                                ? ortChoices.slice(0, 25).map(choice => {
+                                    const fullText = choice.text;
+                                    let displayText;
+                        
+                                    if (fullText.length > 94) {
+                                        displayText = fullText.slice(0, 94) + "..." + fullText.slice(-2);
+                                    } else {
+                                        displayText = fullText;
+                                    }
+                        
+                                    return {
+                                        name: displayText,
+                                        value: choice.id.toString()
+                                    };
+                                })
                                 : [{ name: "Nenhum erro ortográfico encontrado", value: "none" }]
                         );
+                        
                 }
                 break;
         }

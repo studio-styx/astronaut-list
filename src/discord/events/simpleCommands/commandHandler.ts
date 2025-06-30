@@ -3,6 +3,7 @@ import { settings } from "#settings";
 import { ChannelType, Interaction, Message, WebhookClient, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Client } from "discord.js";
 import { vote } from "./commands/vote.js";
 import fs from "fs";
+import { res } from "#functions";
 
 
 interface CachedMessage {
@@ -260,17 +261,23 @@ createEvent({
 
         if (!commandName) return;
 
-        switch(commandName) {
-            case "votar":
-            case "v":
-            case "vote": {
-                await vote(message, args);
-                return;
+        try {
+            switch(commandName) {
+                case "votar":
+                case "v":
+                case "vote": {
+                    await vote(message, args);
+                    return;
+                }
+                default: {
+                    message.reply("Comando não encontrado! Use **/help** para ver os comandos disponíveis.");
+                    return;
+                }
             }
-            default: {
-                message.reply("Comando não encontrado! Use **/help** para ver os comandos disponíveis.");
-                return;
-            }
+        } catch (error) {
+            console.error(error);
+            message.reply(res.danger("Ocorreu um erro ao executar o comando!"));
+            return;
         }
     },
 });

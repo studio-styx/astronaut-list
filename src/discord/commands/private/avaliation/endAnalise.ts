@@ -1,8 +1,8 @@
 import { prisma } from "#database";
-import { res } from "#functions";
+import { icon, res } from "#functions";
 import { settings } from "#settings";
-import { createEmbed } from "@magicyan/discord";
-import { ChatInputCommandInteraction, ColorResolvable, userMention } from "discord.js";
+import { brBuilder, createContainer, createEmbed, createSection, createSeparator } from "@magicyan/discord";
+import { ChatInputCommandInteraction, ColorResolvable, time, userMention } from "discord.js";
 import fs from "fs";
 
 export default async function endAnalise(interaction: ChatInputCommandInteraction<"cached">) {
@@ -35,43 +35,6 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
         }
     });
 
-    const embed = createEmbed({
-        title: "Bot Aprovado",
-        description: `O bot <@${user.analising}> foi aprovado por <@${interaction.user.id}>`,
-        fields: [
-            {
-                name: "Erros encontrados",
-                value: (() => {
-                    const errorAnnotations = annotations.filter(a => a.type === "error");
-                    if (errorAnnotations.length === 0) {
-                        return "Nenhum erro encontrado";
-                    }
-                    return errorAnnotations.map((a, i) => `${i + 1}. | \`${a.text}\``).join("\n");
-                })()
-            },
-            {
-                name: "Erros ortográficos encontrados",
-                value: (() => {
-                    const spellingAnnotations = annotations.filter(a => a.type === "ortographic");
-                    if (spellingAnnotations.length === 0) {
-                        return "Nenhum erro ortográfico encontrado";
-                    }
-                    return spellingAnnotations.map((a, i) => `${i + 1}. | \`${a.text}\``).join("\n");
-                })()
-            },
-            {
-                name: "Analise",
-                value: justification
-            },
-        ],
-        color: settings.colors.success,
-        footer: {
-            text: `Analisado por: ${interaction.user.displayName}`,
-            iconURL: interaction.user.displayAvatarURL()
-        },
-        timestamp: new Date().toISOString()
-    });
-
     const principalGuild = await interaction.client.guilds.fetch(settings.guild.principalId);
     const sandboxGuild = await interaction.client.guilds.fetch(settings.guild.sandboxId);
 
@@ -98,7 +61,7 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
         try {
             const botUser = await principalGuild.members.fetch(user.analising).catch(() => null);
             const botOwner = await principalGuild.members.fetch(application.userId).catch(() => null);
-    
+
             if (botUser) {
                 await botUser.roles.add(settings.guild.roles.roleBotAprroved).catch(console.error);
             } else {
@@ -110,15 +73,49 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
             } else {
                 console.log(`Dono do bot ${application.userId} não encontrado no servidor principal`);
             }
+
+            const ownerUser = await interaction.client.users.fetch(application.userId).catch(() => null);
+            const userBot = await interaction.client.users.fetch(user.analising).catch(() => null);
+            const components = [
+                `${!ownerUser ? "Não encontrado" : userMention(ownerUser.id)} - **${icon.approved} | Seu bot foi aprovado!**`,
+                createSeparator(),
+                createSection({
+                    content: brBuilder(
+                        `## ( ${icon.bug} ╺╸ Erros encontrados durante a analise:`,
+                        annotations.filter(e => e.type === "error").map((annotation, index) => {
+                            return `> ${index + 1}. ${annotation.text}`;
+                        }).join("\n") || "Nenhum erro encontrado",
+                    ),
+                    thumbnail: userBot?.displayAvatarURL() || ownerUser?.displayAvatarURL() || interaction.user.displayAvatarURL(),
+                }),
+                createSeparator(),
+                brBuilder(
+                    `## ( ${icon.pencil} ╺╸ Erros ortográficos encontrados durante a analise:`,
+                    annotations.filter(e => e.type === "ortographic").map((annotation, index) => {
+                        return `> ${index + 1}. ${annotation.text}`;
+                    }).join("\n") || "Nenhum erro ortográfico encontrado",
+                ),
+                createSeparator(),
+                brBuilder(
+                    `## ( ${icon.search} ╺╸ Avaliação:`,
+                    justification
+                ),
+                `-# Avaliador: ${userMention(interaction.user.id)} | Data: ${time(new Date(), "F")}`,
+            ]
+        
+            const container = createContainer({
+                accentColor: settings.colors.success,
+                components
+            })
+
+            await interaction.client.channels.fetch(channelId).then(async channel => {
+                if (channel?.isTextBased() && 'send' in channel) {
+                    await channel.send({ components: [container], flags: ["IsComponentsV2"] });
+                }
+            })
         } catch (e) {
             console.error("Erro ao adicionar cargos:", e);
         }
-
-        await interaction.client.channels.fetch(channelId).then(async channel => {
-            if (channel?.isTextBased() && 'send' in channel) {
-                await channel.send({ embeds: [embed], content: userMention(application.userId)  });
-            }
-        })
     } else {
         const [application] = await prisma.$transaction([
             prisma.application.findUnique({
@@ -147,12 +144,57 @@ export default async function endAnalise(interaction: ChatInputCommandInteractio
             })
         ])
 
-        embed.setTitle("Bot Reprovado");
-        embed.setColor(settings.colors.danger as ColorResolvable);
-        embed.setDescription(`O bot <@${user.analising}> foi reprovado por <@${interaction.user.id}>`);
+        const ownerUser = await interaction.client.users.fetch(application?.userId || "").catch(() => null);
+        const userBot = await interaction.client.users.fetch(user.analising).catch(() => null);
+
+        const components = [
+            `${!ownerUser ? "Não encontrado" : userMention(ownerUser.id)} - **${icon.approved} | Seu bot foi reprovado!**`,
+            createSeparator(),
+            createSection({
+                content: brBuilder(
+                    `## ( ${icon.bug} ╺╸ Erros encontrados durante a analise:`,
+                    annotations.filter(e => e.type === "error").map((annotation, index) => {
+                        return `> ${index + 1}. ${annotation.text}`;
+                    }).join("\n") || "Nenhum erro encontrado",
+                ),
+                thumbnail: userBot?.displayAvatarURL() || ownerUser?.displayAvatarURL() || interaction.user.displayAvatarURL(),
+            }),
+            createSeparator(),
+            brBuilder(
+                `## ( ${icon.pencil} ╺╸ Erros ortográficos encontrados durante a analise:`,
+                annotations.filter(e => e.type === "ortographic").map((annotation, index) => {
+                    return `> ${index + 1}. ${annotation.text}`;
+                }).join("\n") || "Nenhum erro ortográfico encontrado",
+            ),
+            createSeparator(),
+            brBuilder(
+                `## ( ${icon.search} ╺╸ Avaliação:`,
+                justification
+            ),
+            `-# Avaliador: ${userMention(interaction.user.id)} | Data: ${time(new Date(), "F")}`,
+        ]
+    
+        const container = createContainer({
+            accentColor: settings.colors.danger,
+            components
+        })
+
+        let removedComponents: any[] = [];
+
+        if (annotations.join("\n").length + justification.length > 3000) {
+            removedComponents = components.splice(-5);
+        }
+        
         await interaction.client.channels.fetch(channelId).then(async channel => {
             if (channel?.isTextBased() &&'send' in channel) {
-                await channel.send({ embeds: [embed], content: application?.userId ? userMention(application.userId) : "" });
+                await channel.send({ components: [container], flags: ["IsComponentsV2"] });
+                if (removedComponents.length > 0) {
+                    const removedContainer = createContainer({
+                        accentColor: settings.colors.danger,
+                        components: removedComponents
+                    })
+                    await channel.send({ components: [removedContainer], flags: ["IsComponentsV2"] });
+                }
             }
         })
         try {

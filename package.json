@@ -53,6 +53,9 @@
     ],
     "#lib": [
       "./build/lib/index.js"
+    ],
+    "#emojis": [
+      "./emojis.json"
     ]
   },
   "baseVersion": "1.2.8"

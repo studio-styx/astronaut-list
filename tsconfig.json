@@ -34,7 +34,7 @@
 			"#tools": ["./tools/index.ts"],
 			"#server": ["./server/index.ts"],
 			"#lib": ["./lib/index.ts"],
-			"#emojis": ["../emojis.json"],
+			"#emojis": ["./emojis.json"],
 			"#types/*": ["./@types/*"],
 		}
 	},
