@@ -1,268 +1,122 @@
 import { createEvent } from "#base";
 import { settings } from "#settings";
-import { ChannelType, Interaction, Message, WebhookClient, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, Client } from "discord.js";
+import { ChannelType, Message } from "discord.js";
 import { vote } from "./commands/vote.js";
-import fs from "fs";
 import { res } from "#functions";
+import fs from 'fs'
 
+// Armazenamos as filas por ID de thread
+const threadQueues: Record<string, {
+    messages: Message[];
+    timeout: NodeJS.Timeout | null;
+}> = {};
 
-interface CachedMessage {
-    id: string;
-    type: "message" | "interaction";
-    content?: string;
-    commandName?: string;
-    options?: string;
-    userId: string;
-    timestamp: number;
-}
+const maxMessages = 5;
+const maxWaitTime = 20000;
 
-const webhookUrl = process.env.COPY_MESSAGES_WEBHOOK!;
-const webhookClient = new WebhookClient({ url: webhookUrl });
+const sendMessagesViaWebhook = async (message: Message) => {
+    const threadId = message.channel.id;
+    const queue = threadQueues[threadId];
 
-// Cache para armazenar mensagens e interações
-const messageCache: CachedMessage[] = [];
-const MAX_CACHE_SIZE = 5;
-const CACHE_TIMEOUT = 20 * 1000; // 20 segundos
+    if (!queue || queue.messages.length === 0) return;
 
-// Mapa para rastrear mensagens já processadas
-const processedMessages = new Set<string>();
+    const workDir = process.cwd();
+    const file = JSON.parse(fs.readFileSync(`${workDir}/threads.json`, 'utf8'));
+    const threadJson: { replicated: string } = file[threadId];
 
-// Função para processar o cache e enviar mensagens completas
-async function processCache(channelId: string, client: Client) {
-    if (messageCache.length === 0) return;
+    const channelReplicated = message.client.channels.cache.get(threadJson.replicated);
 
-    try {
-        const thread = await client.channels.fetch(channelId);
-        if (!thread || !thread.isThread()) return;
+    if (!channelReplicated || !channelReplicated.isThread()) return;
 
-        // Obter as últimas mensagens do canal
-        const messages = await thread.messages.fetch({ limit: 50 });
-        const data: string[] = JSON.parse(fs.readFileSync(`${process.cwd()}/threads.json`, 'utf-8'));
+    // Enviamos uma cópia da fila atual e limpamos
+    const messagesToSend = [...queue.messages];
+    queue.messages = [];
+    if (queue.timeout) {
+        clearTimeout(queue.timeout);
+        queue.timeout = null;
+    }
 
-        if (!data.includes(thread.id)) return;
-
-        // Processar mensagens do cache
-        const uniqueCache = [...new Map(messageCache.map(item => [item.id, item])).values()]; // Remover duplicatas
-        for (const cached of uniqueCache) {
-            if (processedMessages.has(cached.id)) continue;
-
-            const message = messages.get(cached.id);
-            const baseOptions = {
-                allowedMentions: { parse: [] },
-                username: client.users.cache.get(cached.userId)?.displayName || await client.users.fetch(cached.userId).then(user => user?.displayName || 'Unknown'),
-                avatarURL: (await client.users.fetch(cached.userId)).avatarURL() || undefined,
+    for (const msg of messagesToSend) {
+        try {
+            const payload: any = {
+                content: `\`msg from: ${msg.author.username}\`\n${msg.content}`,
+                username: msg.author.username,
+                avatarURL: msg.author.displayAvatarURL(),
+                files: [...msg.attachments.values()].map(attachment => attachment.url),
+                embeds: msg.embeds,
             };
 
-            if (cached.type === "interaction") {
-                // Enviar slash command
-                const commandContent = `SLASH: /${cached.commandName}${cached.options ? ` ${cached.options}` : ''}`;
-                console.log('Enviando slash command para webhook:', { content: commandContent });
+            if (msg.content.includes('@everyone') || msg.content.includes('@here')) {
+                payload.content = msg.content
+                    .replace(/@everyone/g, '@\u200beveryone')
+                    .replace(/@here/g, '@\u200bhere');
 
-                await webhookClient.send({
-                    ...baseOptions,
-                    content: commandContent,
-                    avatarURL: baseOptions.avatarURL || undefined
-                });
+                await channelReplicated.send(payload);
+                continue;
+            }
 
-                // Enviar resposta do comando, se existir
-                if (message && message.author.bot) {
-                    const messageContent = message.content?.replace(/@(everyone|here)/g, '@\u200b$1') || '';
-                    const components = await createComponents(message);
-                    const isComponentsV2 = Boolean(message.flags?.bitfield & MessageFlags.IsComponentsV2);
-
-                    if (isComponentsV2) {
-                        // Enviar mensagem de erro ao canal original, apenas uma vez
-                        if (!processedMessages.has(cached.id + '-error')) {
-                            await thread.send({
-                                content: "Não foi possível pegar informações da mensagem",
-                                allowedMentions: { parse: [] }
-                            });
-                            processedMessages.add(cached.id + '-error');
-                        }
-                    } else if (messageContent || message.embeds.length || message.attachments.size || components?.length) {
-                        // Para mensagens sem ComponentsV2
-                        const finalContent = messageContent || (components?.length ? `SLASH: /${cached.commandName}` : '');
-
-                        console.log('Enviando resposta de slash command para webhook:', {
-                            content: finalContent,
-                            embeds: message.embeds,
-                            components,
-                            files: message.attachments.size
-                        });
-
-                        await webhookClient.send({
-                            ...baseOptions,
-                            content: finalContent,
-                            embeds: message.embeds,
-                            files: [...message.attachments.values()] as const,
-                            components,
-                            avatarURL: baseOptions.avatarURL || undefined
-                        });
-                    }
-                }
-            } else if (message) {
-                // Enviar mensagem normal ou resposta de bot
-                const isBot = message.author.bot;
-                const messageContent = message.content?.replace(/@(everyone|here)/g, '@\u200b$1') || '';
-                const components = await createComponents(message);
-                const isComponentsV2 = Boolean(message.flags?.bitfield & MessageFlags.IsComponentsV2);
-
-                if (isComponentsV2) {
-                    // Enviar mensagem de erro ao canal original, apenas uma vez
-                    if (!processedMessages.has(cached.id + '-error')) {
-                        await thread.send({
-                            content: "Não foi possível pegar informações da mensagem",
-                            allowedMentions: { parse: [] }
-                        });
-
-                        await webhookClient.send({
-                            ...baseOptions,
-                            content: "Não foi possível pegar informações da mensagem",
-                            avatarURL: baseOptions.avatarURL || undefined
-                        });
-
-                        processedMessages.add(cached.id + '-error');
-                    }
-                } else if (messageContent || message.embeds.length || message.attachments.size || components?.length) {
-                    // Para mensagens sem ComponentsV2
-                    const finalContent = isBot && !messageContent && (message.embeds.length || components?.length)
-                        ? `SLASH: /<comando desconhecido>`
-                        : messageContent;
-
-                    console.log('Enviando mensagem para webhook:', {
-                        content: finalContent,
-                        embeds: message.embeds,
-                        components,
-                        files: message.attachments.size
-                    });
-
-                    await webhookClient.send({
-                        ...baseOptions,
-                        content: finalContent,
-                        embeds: message.embeds,
-                        files: [...message.attachments.values()] as const,
-                        components,
-                        avatarURL: baseOptions.avatarURL || undefined
+            if (!msg.content && !msg.embeds?.length && !msg.attachments.size && msg.components?.length > 0) {
+                if ('send' in channelReplicated) {
+                    await channelReplicated.send({
+                        components: msg.components,
+                        flags: ["IsComponentsV2"]
                     });
                 }
+                continue;
             }
 
-            processedMessages.add(cached.id);
-        }
-
-        // Limpar cache
-        messageCache.length = 0;
-
-        // Limpar mensagens processadas antigas
-        if (processedMessages.size > 1000) {
-            processedMessages.clear();
-        }
-    } catch (error) {
-        console.error('Erro ao processar cache:', error);
-    }
-}
-
-async function handleSandboxMessage(message: Message | Interaction): Promise<void> {
-    if (!message.guild || message.guild.id !== settings.guild.sandboxId) return;
-    if (!('channel' in message) || !message.channel?.isThread()) return;
-
-    const channelId = message.channel.id;
-
-    try {
-        // Adicionar ao cache
-        if ('isCommand' in message && message.isCommand()) {
-            let commandInfo = message.commandName;
-            if ('options' in message) {
-                commandInfo += message.options.data.map(opt => ` ${opt.name}:${opt.value}`).join('');
-            }
-
-            // Evitar duplicatas no cache
-            if (!messageCache.some(c => c.id === message.id)) {
-                messageCache.push({
-                    id: message.id,
-                    type: "interaction",
-                    commandName: message.commandName,
-                    options: message.options.data.length ? message.options.data.map(opt => `${opt.name}:${opt.value}`).join(' ') : undefined,
-                    userId: message.user.id,
-                    timestamp: Date.now()
-                });
-            }
-        } else if (message instanceof Message) {
-            // Evitar duplicatas no cache
-            if (!messageCache.some(c => c.id === message.id)) {
-                messageCache.push({
-                    id: message.id,
-                    type: "message",
-                    content: message.content,
-                    userId: message.author.id,
-                    timestamp: Date.now()
-                });
-            }
-        }
-
-        // Verificar se deve processar o cache
-        if (messageCache.length >= MAX_CACHE_SIZE) {
-            await processCache(channelId, message.client);
-        } else {
-            // Agendar processamento após 20 segundos, se não for cancelado
-            setTimeout(() => {
-                if (messageCache.length > 0) {
-                    processCache(channelId, message.client);
-                }
-            }, CACHE_TIMEOUT);
-        }
-    } catch (error) {
-        console.error('Erro ao lidar com mensagem:', error);
-    }
-}
-
-async function createComponents(source: Message | Interaction) {
-    if (!('components' in source)) return undefined;
-    if (!source.components?.length) return undefined;
-
-    const rows: ActionRowBuilder<ButtonBuilder>[] = [];
-
-    for (const row of source.components) {
-        const actionRow = new ActionRowBuilder<ButtonBuilder>();
-        
-        for (const component of ('components' in row ? row.components : [])) {
-            if (component.type === ComponentType.Button) {
-                actionRow.addComponents(
-                    new ButtonBuilder()
-                        .setLabel(component.label || 'Ver original')
-                        .setStyle(ButtonStyle.Link)
-                        .setURL(source instanceof Message ? source.url : 'https://discord.com')
-                );
-            }
-        }
-
-        if (actionRow.components.length) {
-            rows.push(actionRow);
+            await channelReplicated.send(payload);
+        } catch (error) {
+            console.error('Error sending message:', error);
         }
     }
+};
 
-    return rows.length ? rows : undefined;
-}
+const handleSandboxMessage = async (message: Message) => {
+    const threadId = message.channel.id;
+
+    // Inicializa a fila se não existir
+    if (!threadQueues[threadId]) {
+        threadQueues[threadId] = {
+            messages: [],
+            timeout: null
+        };
+    }
+
+    const queue = threadQueues[threadId];
+
+    // Se for a primeira mensagem, inicia o timeout
+    if (queue.messages.length === 0) {
+        queue.timeout = setTimeout(() => sendMessagesViaWebhook(message), maxWaitTime);
+    }
+
+    queue.messages.push(message);
+
+    // Se atingir o máximo de mensagens, envia imediatamente
+    if (queue.messages.length >= maxMessages) {
+        await sendMessagesViaWebhook(message);
+    }
+};
 
 createEvent({
     name: "prefixCommandHandler",
     event: "messageCreate",
     async run(message) {
-        if (message?.guild?.id === settings.guild.sandboxId) {
+        if (message?.guild?.id === settings.guild.sandboxId && message.channel.isThread()) {
             await handleSandboxMessage(message).catch(console.error);
         }
 
         if (message.author.bot) return;
         if (message.channel.type === ChannelType.DM) return;
         if (!message.content.startsWith(settings.prefix)) return;
-        
+
         const args = message.content.slice(settings.prefix.length).trim().split(/ +/g);
         const commandName = args.shift()?.toLowerCase();
 
         if (!commandName) return;
 
         try {
-            switch(commandName) {
+            switch (commandName) {
                 case "votar":
                 case "v":
                 case "vote": {
@@ -280,14 +134,4 @@ createEvent({
             return;
         }
     },
-});
-
-createEvent({
-    name: "slashCommandHandler",
-    event: "interactionCreate",
-    async run(interaction) {
-        if (interaction.isCommand() || interaction.isContextMenuCommand()) {
-            await handleSandboxMessage(interaction).catch(console.error);
-        }
-    }
 });

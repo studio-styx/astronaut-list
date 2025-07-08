@@ -2,7 +2,7 @@ import { createCommand } from "#base";
 import { res } from "#functions";
 import { settings } from "#settings";
 import { createEmbed, createRow } from "@magicyan/discord";
-import { ApplicationCommandType, ButtonBuilder, ButtonStyle, Channel, ChannelType } from "discord.js";
+import { ApplicationCommandType, ButtonBuilder, ButtonStyle, Channel, ChannelType, channelMention } from "discord.js";
 
 createCommand({
     name: "add-bot-template",
@@ -17,36 +17,9 @@ createCommand({
 
         const embeds = [
             createEmbed({
-                title: "Adicionar Aplicação",
-                description: "Se sua aplicação segue os requisitos na embed abaixo clique no Botão \"Adicionar Aplicação\".",
-                color: "#0A343E"
-            }),
-            createEmbed({
                 description: `
-                    # <:addapp:1373032958088188048> Adicionar App - Qualificações
-
-                    - 1. Original:
-                    > A aplicação não deve obter nenhum comando com uso de templete, share ou sharecode de outras aplicações ou wikis! 
-
-                    - 2. Nsfw:
-                    > Está Proibido Qualquer Comando, imagem ou emojis Nsfw ou que apresentam Gore na aplicação! 
-
-                    - 3. Divulgação:
-                    > A Aplicação está proibida de divulgar qualquer servidor ou link sem contato com a aplicação! 
-
-                    - 4. Erros:
-                    > A aplicação só deve apresentar 5 Erros em sua análise! Para Erros Ortográficos São contados apenas 7! 
-
-                    - 5. Raid:
-                    > A Aplicação não deve ser de raid ou ter participado de uma! Isto conta com o desenvolvedor Também!
-
-                    - 6. Comandos:
-                    > A Aplicação deve ter no minimo 10 comandos!
-
-                    # Requisitos Extras:
-
-                    - 1. Tos:
-                    > A Aplicação deve seguir todos Os Termos de serviços do Discord!
+                    ## Adicione sua aplicação ao servidor! fique atento aos requisitos em: ${channelMention("1389391615537189004")},
+                    E ai? sua aplicação atende aos requisitos? clique no botão abaixo para adicionar sua aplicação!
                 `,
                 color: "#0A343E"
             })

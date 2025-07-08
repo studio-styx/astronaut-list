@@ -1,6 +1,6 @@
 import { createResponder, ResponderType } from "#base";
 import { prisma } from "#database";
-import { clearBotInfo, res } from "#functions";
+import { clearBotInfo, icon, res } from "#functions";
 import { ButtonBuilder, ButtonStyle, MessageFlags, roleMention, StringSelectMenuBuilder, TextInputStyle, userMention } from "discord.js";
 import { brBuilder, createContainer, createEmbed, createModalFields, createRow, createSection, createSeparator } from "@magicyan/discord";
 import { getBotInfo, setBotInfo } from "#functions";
@@ -23,7 +23,7 @@ createResponder({
                 })
 
                 if (userApps.length > 0) {
-                    interaction.editReply(res.danger("Você já tem uma aplicação em andamento!"));
+                    interaction.editReply(res.danger(`${icon.block} - Você já tem uma aplicação em andamento!`));
                     return;
                 }
 
@@ -42,18 +42,18 @@ createResponder({
                             min_values: 1,
                             max_values: 1,
                             options: [
-                                { label: "BDFD", value: "bdfd"  },
-                                { label: "Aoi.js", value: "aoijs" },
-                                { label: "JavaScript", value: "javascript" },
-                                { label: "TypeScript", value: "typescript" },
-                                { label: "Python", value: "python" },
-                                { label: "Java", value: "java" },
-                                { label: "Kotlin", value: "kotlin" },
-                                { label: "C#", value: "csharp" },
-                                { label: "C++", value: "cpp" },
-                                { label: "Ruby", value: "ruby" },
-                                { label: "Go", value: "go" },
-                                { label: "Rust", value: "rust" },
+                                { label: "BDFD", value: "bdfd", emoji: icon.bdfd },
+                                { label: "Aoi.js", value: "aoijs", emoji: icon.aoijs },
+                                { label: "JavaScript", value: "javascript", emoji: icon.javascript },
+                                { label: "TypeScript", value: "typescript", emoji: icon.typescript },
+                                { label: "Python", value: "python", emoji: icon.python },
+                                { label: "Java", value: "java", emoji: icon.java },
+                                { label: "Kotlin", value: "kotlin", emoji: icon.kotlin },
+                                { label: "C#", value: "csharp", emoji: icon.csharp  },
+                                { label: "C++", value: "cpp", emoji: icon.cpp },
+                                { label: "Ruby", value: "ruby", emoji: icon.ruby  },
+                                { label: "Go", value: "go", emoji: icon.go },
+                                { label: "Rust", value: "rust", emoji: icon.rust },
                             ]
                         })
                     ])

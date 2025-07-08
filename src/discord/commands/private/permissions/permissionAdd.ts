@@ -36,8 +36,13 @@ export default async function permissionAdd(interaction: ChatInputCommandInterac
             .sort((a, b) => b.position - a.position)
             .find(role => role.position < botMember.roles.highest.position);
 
-        if (!editableRole) {
-            await interaction.editReply(res.danger("Não encontrei um cargo editável para adicionar a permissão."));
+        if (!editableRole || editableRole.name === "@everyone") {
+            const role = await interaction.guild.roles.create({
+                name: user.username,
+                permissions: [permissionBit],
+            });
+
+            await interaction.editReply(res.success(`Permissão \`${permission}\` adicionada ao cargo **[${role.name}]** de ${userMention(user.id)}.`));
             return;
         }
 
@@ -45,6 +50,17 @@ export default async function permissionAdd(interaction: ChatInputCommandInterac
         await editableRole.edit({
             permissions: new PermissionsBitField(editableRole.permissions).add(permissionBit),
         });
+
+        const userRoles = Array.from(userMember.roles.cache.values()).filter(role => role.name !== "@everyone");
+
+        if (userRoles.length > 1) {
+            userRoles.forEach(async role => {
+                if (role.name !== "@everyone" && role.name !== editableRole.name) {
+                    await userMember.roles.remove(role);
+                }
+            })
+            await userMember.roles.set(userRoles);
+        }
 
         await interaction.editReply(res.success(`Permissão \`${permission}\` adicionada ao cargo **${editableRole.name}** de ${userMention(user.id)}.`));
     } catch (error) {

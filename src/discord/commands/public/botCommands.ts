@@ -233,10 +233,10 @@ createCommand({
                     })
                 ])
 
-
                 const description = hasRole
                     ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${newBot.votes}** votos. \n\n Você ganhou **700** planetas`
                     : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${newBot.votes}** votos. \n\n Você ganhou **500** planetas`;
+
 
                 const embed = createEmbed({
                     title: "Aplicação votada",

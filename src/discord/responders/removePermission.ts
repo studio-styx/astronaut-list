@@ -34,6 +34,17 @@ createResponder({
                 permissions: new PermissionsBitField(highestRole.permissions).remove(permissionBit),
             });
 
+            const userRoles = Array.from(user.roles.cache.values()).filter(role => role.name !== "@everyone");
+
+            if (userRoles.length > 1) {
+                userRoles.forEach(async role => {
+                    if (role.name !== "@everyone" && role.name !== highestRole.name) {
+                        await user.roles.remove(role);
+                    }
+                })
+                await user.roles.set(userRoles);
+            }
+
             await interaction.editReply(`Permissão \`${permission}\` removida de ${userMention(userId)}.`);
         } catch (error) {
             console.error("Erro ao remover permissão:", error);

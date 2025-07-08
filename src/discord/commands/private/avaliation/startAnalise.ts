@@ -47,8 +47,23 @@ export default async function startAnalise(interaction: ChatInputCommandInteract
             : null
         );
 
+        const replicatedChannel = await interaction.client.channels.fetch(settings.guild.channels.analisando);
+
+        const replicatedThread = await (replicatedChannel?.isTextBased() && 'threads' in replicatedChannel
+            ? replicatedChannel.threads.create({
+                name: `Análise do bot: ${bot.name}`,
+                autoArchiveDuration: 1440,
+                reason: `Análise iniciada por ${interaction.user.tag}`
+            }).catch(error => console.error(error))
+            : null
+        );
+
         if (!thread) {
             return interaction.editReply(res.danger("Falha ao criar uma thread para a análise."));
+        }
+
+        if (!replicatedThread) {
+            return interaction.editReply(res.danger("Falha ao criar uma thread rastreada para a análise."));
         }
 
         await prisma.$transaction([
@@ -79,9 +94,9 @@ export default async function startAnalise(interaction: ChatInputCommandInteract
         }
 
         const rootPath = `${process.cwd()}/threads.json`;
-        const preview: string[] = JSON.parse(fs.readFileSync(rootPath, "utf-8"));
+        const preview: { [key: string]: { replicated: string } } = JSON.parse(fs.readFileSync(rootPath, "utf-8"));
 
-        preview.push(thread.id);
+        preview[thread.id] = { replicated: replicatedThread?.id };
 
         fs.writeFileSync(rootPath, JSON.stringify(preview, null, 4));
 

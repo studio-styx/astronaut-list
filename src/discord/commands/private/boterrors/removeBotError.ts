@@ -16,21 +16,12 @@ export default async function removeBotError(interaction: ChatInputCommandIntera
         return
     }
 
-    const bot = await prisma.application.findUnique({
-        where: {
-            id: user.analising,
-            avaliation: null
-        }
-    })
-
     const error = interaction.options.getString("erro", true)
 
     const annotation = await prisma.annotation.findFirst({
         where: {
-            applicationId: bot?.id,
-            userId: interaction.user.id,
-            type,
-            text: error
+            id: Number(error),
+            type
         }
     })
 
