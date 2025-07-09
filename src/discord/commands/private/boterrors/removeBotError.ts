@@ -11,14 +11,19 @@ export default async function removeBotError(interaction: ChatInputCommandIntera
         }
     })
 
-    if (!user?.analising) {
+    if (!user?.analisingId) {
         interaction.editReply(res.danger("Você não está analisando nenhum bot"))
         return
     }
 
     const error = interaction.options.getString("erro", true)
 
-    const annotation = await prisma.annotation.findFirst({
+    if (isNaN(Number(error))) {
+        interaction.editReply(res.danger("O id da anotação é inválido!"))
+        return
+    }
+
+    const annotation = await prisma.annotation.findUnique({
         where: {
             id: Number(error),
             type

@@ -13,6 +13,16 @@ export interface BotInfo {
   prefix2: string | null | undefined;
 }
 
+export interface AnalyzeInfo {
+  avaliation: string | null;
+  id: number;
+  userId: string | null;
+  createdAt: Date;
+  applicationId: string | null;
+  approved: boolean | null;
+  finishedIn: Date | null;
+}
+
 export function getBotInfo(userId: string): BotInfo | undefined {
   return cache.get<BotInfo>(userId);
 }

@@ -11,35 +11,39 @@ export default async function listBotErrors(interaction: ChatInputCommandInterac
         }
     })
 
-    if (!user?.analising) {
+    if (!user?.analisingId) {
         interaction.editReply(res.danger("Você não está analisando nenhum bot"))
         return
     }
 
-    const bot = await prisma.application.findUnique({
+    const analyze = await prisma.analyze.findUnique({
         where: {
-            id: user.analising,
-            avaliation: null
+            id: user.analisingId,
+        },
+        include: {
+            annotations: true
         }
     })
 
-    if (!bot) {
+    if (!analyze) {
+        await prisma.user.update({
+            where: {
+                id: interaction.user.id
+            },
+            data: {
+                analisingId: null
+            }
+        })
         interaction.editReply(res.danger("Bot não encontrado ou já foi analisado"))
         return
     }
 
-    const errors = await prisma.annotation.findMany({
-        where: {
-            applicationId: bot?.id,
-            userId: interaction.user.id,
-            type
-        }
-    })
+    const errors = analyze.annotations.filter((annotation) => annotation.type === type)
 
     if (errors.length === 0) {
         interaction.editReply(res.danger("Não há erros registrados"))
         return
     }
 
-    interaction.editReply(res.success("Erros registrados:\n" + errors.map((error) => `\`${error.text}\``).join("\n")))
+    interaction.editReply(res.success("Erros registrados:\n" + errors.map((error, index) => `${index + 1}. \`${error.text}\``).join("\n")))
 }

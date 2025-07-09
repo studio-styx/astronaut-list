@@ -1,6 +1,5 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["prismaSchemaFolder"]
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -17,9 +16,7 @@ model User {
   isAvaliator Boolean @default(false)
   createdAt   DateTime @default(now())
   cooldowns   Cooldown[]
-  analisingId  Int?     // FK opcional
-  analising    Analyze? @relation("CurrentlyAnalysing", fields: [analisingId], references: [id])
-  annotations Annotation[]
+  analisingId  Int? @unique
   coins       Int @default(0)
   analyzes    Analyze[]
 }
@@ -31,14 +28,14 @@ model Application {
   user        User @relation(fields: [userId], references: [id])
   name        String
   votes       Int @default(0)
-  avaliation  String?
   language    String
   lib         String
   description String?
   prefix      String
   prefix2     String?
   createdAt   DateTime @default(now())
-  analyze     Analyze?
+  analyzeId   Int? @unique
+  analyze     Analyze? @relation(fields: [analyzeId], references: [id])
 }
 
 model Cooldown {
@@ -54,7 +51,7 @@ model Cooldown {
 
 model Annotation {
   id          Int @id @default(autoincrement())
-  analyzeId   String
+  analyzeId   Int
   analyze     Analyze @relation(fields: [analyzeId], references: [id])
   type        String
   text        String
@@ -72,19 +69,14 @@ model VoteReminder {
 }
 
 model Analyze {
-  id          Int @id @default(autoincrement())
-
-  applicationId String @unique
-  application Application @relation(fields: [applicationId], references: [id])
-  userId      String?
-  user        User?     @relation(fields: [userId], references: [id])
-
-  annotations Annotation[]
-
-  avaliation  String?
-
-  createdAt   DateTime @default(now())
-  finishedIn  DateTime?
-
-  currentlyAnalysedBy User? @relation("CurrentlyAnalysing")
+  id            Int @id @default(autoincrement())
+  applicationId String?
+  application   Application? @relation
+  userId        String?
+  user          User? @relation(fields: [userId], references: [id])
+  annotations   Annotation[]
+  avaliation    String?
+  approved      Boolean?
+  createdAt     DateTime @default(now())
+  finishedIn    DateTime?
 }

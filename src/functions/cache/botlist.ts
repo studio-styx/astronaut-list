@@ -1,18 +1,20 @@
+import { AnalyzeInfo } from "./cache.js";
+
 interface Bot {
     id: string;
     userId: string;
     name: string;
     votes: number;
-    avaliation: string | null;
+    analyzeId: number | null;
     language: string;
     lib: string;
     description: string | null;
     prefix: string;
     prefix2: string | null;
     createdAt: Date;
-    lastUpdated?: Date; // Novo campo para controle
+    lastUpdated: Date;
+    analyze: AnalyzeInfo | null;
 }
-
 export class BotCache {
     private bots: Map<string, Bot>;
     private static instance: BotCache;

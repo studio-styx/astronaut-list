@@ -254,11 +254,10 @@ createCommand({
                 const userTech = await prisma.user.findUnique({
                     where: {
                         id: interaction.user.id,
-                        analising: { not: null }
                     }
                 });
 
-                if (!userTech?.analising) {
+                if (!userTech?.analisingId) {
                     return interaction.respond([{ name: "Você não está analisando nenhum bot", value: "none" }]);
                 }
 
@@ -267,8 +266,7 @@ createCommand({
                         const techChoices = await prisma.annotation.findMany({
                             where: {
                                 text: { contains: focusedValue, mode: "insensitive" },
-                                userId: interaction.user.id,
-                                applicationId: userTech.analising,
+                                analyzeId: userTech.analisingId,
                                 type: "error"
                             }
                         });
@@ -299,11 +297,10 @@ createCommand({
                 const userOrt = await prisma.user.findUnique({
                     where: {
                         id: interaction.user.id,
-                        analising: { not: null }
                     }
                 });
 
-                if (!userOrt?.analising) {
+                if (!userOrt?.analisingId) {
                     return interaction.respond([{ name: "Você não está analisando nenhum bot", value: "none" }]);
                 }
 
@@ -312,8 +309,7 @@ createCommand({
                         const ortChoices = await prisma.annotation.findMany({
                             where: {
                                 text: { contains: focusedValue, mode: "insensitive" },
-                                userId: interaction.user.id,
-                                applicationId: userOrt.analising,
+                                analyzeId: userOrt.analisingId,
                                 type: "ortographic"
                             }
                         });

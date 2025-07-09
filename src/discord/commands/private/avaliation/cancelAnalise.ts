@@ -13,26 +13,24 @@ export default async function cancelAnalise(interaction: ChatInputCommandInterac
     })
 
     if (!user?.isAvaliator) {
-        await interaction.editReply(res.danger("Você não é um avaliador!"));
+        await interaction.editReply(res.danger("Você não é um analisador!"));
         return;
     }
-    if (!user?.analising) {
+    if (!user?.analisingId) {
         await interaction.editReply(res.danger("Você não está analisando nenhum bot!"));
         return;
     }
 
-    const [bot] = await prisma.$transaction([
-        prisma.application.findUnique({
+    const [analyse] = await prisma.$transaction([
+        prisma.analyze.update({
             where: {
-                id: user.analising
-            }
-        }),
-        prisma.application.update({
-            where: {
-                id: user.analising
+                id: user.analisingId
             },
             data: {
-                avaliation: null
+                userId: null
+            },
+            include: {
+                application: true
             }
         }),
         prisma.user.update({
@@ -40,27 +38,25 @@ export default async function cancelAnalise(interaction: ChatInputCommandInterac
                 id: interaction.user.id
             },
             data: {
-                analising: null
-            }
-        }),
-        prisma.annotation.updateMany({
-            where: {
-                userId: user.analising,
-                applicationId: user.analising
-            },
-            data: {
-                userId: "0"
+                analisingId: null
             }
         })
     ]);
+
+    const { application: bot } = analyse!;
+
+    if (!bot) {
+        await interaction.editReply(res.danger("Bot não encontrado ou já analisado."));
+        return;
+    }
 
     const channelId = settings.guild.channels.requests;
 
     const channel = await interaction.client.channels.fetch(channelId);
 
-    const botUser = await interaction.client.users.fetch(user.analising);
+    const botUser = await interaction.client.users.fetch(bot.id);
 
-    if (channel?.isTextBased() && bot && 'send' in channel) channel.send(res.danger(`${interaction.user} cancelou a analise de <@${user.analising}>`, { thumbnail: botUser?.displayAvatarURL(), content: userMention(bot.userId) }))
+    if (channel?.isTextBased() && bot && 'send' in channel) channel.send(res.danger(`${interaction.user} cancelou a analise de ${userMention(bot.id)}`, { thumbnail: botUser?.displayAvatarURL(), content: userMention(bot.userId) }))
 
     await interaction.editReply(res.danger("Analise cancelada!"));
 }

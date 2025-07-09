@@ -9,7 +9,7 @@ const store = new Store<Date>();
 
 export const { createCommand, createEvent, createResponder } = setupCreators({
     commands: {
-        // guilds: ["1322716137972039814", "1338980027529957396", "1373806908149858334"],
+        guilds: ["1322716137972039814", "1338980027529957396", "1373806908149858334"],
         onError(error, interaction) {
             console.log(error);
 
@@ -88,7 +88,7 @@ export const { createCommand, createEvent, createResponder } = setupCreators({
                 return;
             }
 
-            store.set(interaction.user.id, new Date(Date.now() + 6000), { time: 6000 });
+            store.set(interaction.user.id, new Date(Date.now() + 2000), { time: 2000 });
         },
     }
 });

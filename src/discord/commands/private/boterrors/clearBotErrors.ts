@@ -11,26 +11,28 @@ export default async function clearBotErrors(interaction: ChatInputCommandIntera
         }
     })
 
-    if (!user?.analising) {
+    if (!user?.analisingId) {
         interaction.editReply(res.danger("Você não está analisando nenhum bot"))
         return
     }
 
-    const bot = await prisma.application.findUnique({
+    const analyze = await prisma.analyze.findUnique({
         where: {
-            id: user.analising,
-            avaliation: null
+            id: user.analisingId
+        },
+        include: {
+            application: true
         }
     })
 
-    if (!bot) {
+    if (!analyze?.application) {
         interaction.editReply(res.danger("Bot não encontrado ou já foi analisado"))
         await prisma.user.update({
             where: {
                 id: interaction.user.id
             },
             data: {
-                analising: null
+                analisingId: null
             }
         })
         return
@@ -39,15 +41,13 @@ export default async function clearBotErrors(interaction: ChatInputCommandIntera
     const [errors] = await prisma.$transaction([
         prisma.annotation.findMany({
             where: {
-                applicationId: bot?.id,
-                userId: interaction.user.id,
+                analyzeId: analyze.id,
                 type
             }
         }),
         prisma.annotation.deleteMany({
             where: {
-                applicationId: bot?.id,
-                userId: interaction.user.id,
+                analyzeId: analyze.id,
                 type
             }
         })

@@ -18,7 +18,7 @@ createResponder({
                 const userApps = await prisma.application.findMany({
                     where: {
                         userId: interaction.user.id,
-                        avaliation: null
+                        analyze: { finishedIn: null }
                     }
                 })
 

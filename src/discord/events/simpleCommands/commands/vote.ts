@@ -68,13 +68,20 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
 
     const bot = await prisma.application.findUnique({
         where: {
-            id: botId,
-            avaliation: { not: null }
+            id: botId
+        },
+        include: {
+            analyze: true
         }
     });
 
     if (!bot) {
         message.reply(res.danger("O bot mencionado não está na lista de bots!"));
+        return;
+    }
+
+    if (!bot?.analyze || !bot?.analyze?.finishedIn) {
+        message.reply(res.danger("O bot mencionado ainda não foi analisado!"));
         return;
     }
 

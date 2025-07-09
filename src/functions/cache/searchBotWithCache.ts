@@ -12,6 +12,7 @@ export async function searchBotsWithCache(
     
     // Busca todos os bots do cache
     const cachedBots = botCache.getAll();
+    console.log("Cached Bots:", cachedBots);
     
     // Filtra os bots do cache baseado nos critérios
     const filteredFromCache = cachedBots.filter(bot => {
@@ -22,40 +23,44 @@ export async function searchBotsWithCache(
         
         const matchesUserId = filterOptions.userId ? bot.userId === filterOptions.userId : true;
         
-        // Lógica para filtrar por estado de avaliação
         let matchesAvaliation = true;
         if (filterOptions.avaliation !== undefined) {
-            if (filterOptions.avaliation === true) {
-                matchesAvaliation = bot.avaliation !== null;
-            } else if (filterOptions.avaliation === false) {
-                matchesAvaliation = bot.avaliation === null;
-            }
-            // Se for null, não filtra por avaliação (retorna ambos)
+            matchesAvaliation = filterOptions.avaliation
+                ? bot.analyze?.finishedIn !== null // Bots avaliados
+                : bot.analyze === null || (bot.analyze?.finishedIn === null && bot.analyze?.userId === null); // Bots não avaliados
         }
         
+        console.log(`Bot ${bot.id}: matchesSearch=${matchesSearch}, matchesUserId=${matchesUserId}, matchesAvaliation=${matchesAvaliation}`);
         return matchesSearch && matchesUserId && matchesAvaliation;
     }).slice(0, 25);
     
-    // Se encontrou resultados suficientes no cache, retorna
-    if (filteredFromCache.length > 0) {
-        return filteredFromCache;
-    }
-    
     // Configura a cláusula WHERE para o Prisma
-    const whereClause: any = {
-        OR: [
+    const whereClause: any = {};
+    
+    // Filtro por busca
+    if (focused) {
+        whereClause.OR = [
             { name: { contains: focused, mode: "insensitive" } },
             { description: { contains: focused, mode: "insensitive" } },
             { id: focused }
-        ]
-    };
+        ];
+    }
     
     // Filtro por avaliação
     if (filterOptions.avaliation !== undefined && filterOptions.avaliation !== null) {
-        if (filterOptions.avaliation === true) {
-            whereClause.avaliation = { not: null };
+        if (filterOptions.avaliation) {
+            whereClause.analyze = { finishedIn: { not: null } }; // Bots avaliados
         } else {
-            whereClause.avaliation = null;
+            whereClause.AND = [
+                {
+                    OR: [
+                        { analyze: { is: null } }, // Sem análise associada
+                        { analyze: { finishedIn: null, userId: null } } // Análise não concluída e sem analisador
+                    ]
+                },
+                ...(whereClause.OR ? [{ OR: whereClause.OR }] : []) // Combina com filtro de busca, se existir
+            ];
+            delete whereClause.OR; // Remove OR para evitar conflitos
         }
     }
     
@@ -67,11 +72,33 @@ export async function searchBotsWithCache(
     // Busca no banco de dados
     const dbBots = await prisma.application.findMany({
         where: whereClause,
-        take: 25
+        take: 25,
+        include: {
+            analyze: true
+        }
     });
     
-    // Atualiza o cache com os novos bots encontrados
-    dbBots.forEach(bot => botCache.add(bot));
+    console.log("Database Bots:", dbBots);
     
-    return dbBots;
+    // Atualiza o cache com os novos bots encontrados
+    dbBots.forEach(bot => botCache.add({
+        ...bot,
+        id: bot.id,
+        lastUpdated: new Date(),
+        analyze: bot.analyze
+    }));
+    
+    // Se avaliation === false, retorna apenas do banco para garantir consistência
+    if (filterOptions.avaliation === false) {
+        return dbBots;
+    }
+    
+    // Combina resultados do cache e banco, priorizando o banco
+    const combinedResults = [
+        ...dbBots,
+        ...filteredFromCache.filter(cachedBot => !dbBots.some(dbBot => dbBot.id === cachedBot.id))
+    ].slice(0, 25);
+    
+    console.log("Returning combined results:", combinedResults);
+    return combinedResults;
 }

@@ -51,7 +51,7 @@ createCommand({
             ]
         },
         {
-            name: "forçar",
+            name: "forcar",
             description: "forçar algo",
             type: ApplicationCommandOptionType.SubcommandGroup,
             options: [
@@ -93,7 +93,7 @@ createCommand({
                     type: ApplicationCommandOptionType.Subcommand,
                     options: [
                         {
-                            name: "possibleOffline",
+                            name: "possibleoffline",
                             description: "Se você quer kickar bots possivelmente offline, marque como true",
                             type: ApplicationCommandOptionType.Boolean,
                             required: false
@@ -141,21 +141,21 @@ createCommand({
                 filteredUsers.slice(0, 25)
             );
         } else {
-            const avaliations = await prisma.user.findMany({
+            const analyzes = await prisma.analyze.findMany({
                 where: {
-                    analising: { not: null }
+                    userId: { not: null },
+                    finishedIn: null
                 }
-            });
+            })
 
-            if (avaliations.length === 0) {
+            if (analyzes.length === 0) {
                 await interaction.respond([{ name: "Nenhuma análise encontrada", value: "Nenhuma análise encontrada" }]);
                 return;
             }
 
-            const options = avaliations.map(async avaliation => {
-                if (!avaliation?.analising) return { name: `${await getUserName(avaliation.id)} analisando: desconhecido` };
+            const options = analyzes.map(async avaliation => {
                 return {
-                    name: `${await getUserName(avaliation.id)} analisando: ${await getUserName(avaliation?.analising)}`,
+                    name: `${await getUserName(avaliation.userId!)} analisando: ${await getUserName(avaliation.applicationId!)}`,
                     value: avaliation.id
                 };
             });
@@ -169,7 +169,7 @@ createCommand({
                     .filter(option => option.value !== undefined)
                     .map(option => ({
                         name: option.name,
-                        value: option.value || option.name
+                        value: option.value.toString()
                     }))
                     .slice(0, 25)
             );
@@ -219,50 +219,62 @@ createCommand({
             case "forçar":
                 switch (subcommand) {
                     case "cancelar-analise": {
-                        const botId = options.getString("analise", true);
+                        const analyzeId = Number(options.getString("analise", true));
 
-                        await interaction.deferReply();
-
-                        const avaliator = await prisma.user.findFirst({
-                            where: {
-                                analising: botId
-                            }
-                        })
-
-                        if (!avaliator) {
-                            interaction.reply(res.danger(`Analise não encontrada para: ${userMention(botId)}`));
+                        if (isNaN(analyzeId)) {
+                            interaction.reply(res.danger("Analise inválida!"));
                             return;
                         }
 
-                        const [__, bot] = await prisma.$transaction([
+                        await interaction.deferReply();
+
+                        const analyze = await prisma.analyze.findUnique({
+                            where: {
+                                id: analyzeId
+                            },
+                            include: {
+                                application: true
+                            }
+                        });
+
+                        if (!analyze) {
+                            interaction.reply(res.danger(`Analise não encontrada para: o id: ${analyzeId}`));
+                            return;
+                        }
+                        if (!analyze.userId) {
+                            interaction.reply(res.danger(`Nenhum usuário analisa ${userMention(analyze.applicationId!)}`));
+                            return;
+                        }
+
+                        await prisma.$transaction([
                             prisma.user.update({
                                 where: {
-                                    id: botId
+                                    id: analyze.userId
                                 },
                                 data: {
-                                    analising: null
+                                    analisingId: null
                                 }
                             }),
-                            prisma.application.findUnique({
+                            prisma.analyze.update({
                                 where: {
-                                    id: botId
+                                    id: analyzeId
+                                },
+                                data: {
+                                    userId: null,
                                 }
                             })
                         ])
 
-                        if (!bot) {
-                            interaction.reply(res.danger(`Bot não encontrado para: ${userMention(botId)}`));
-                            return;
-                        }
+                        const { application: bot } = analyze;
 
                         try {
                             const channel = await interaction.client.channels.fetch(settings.guild.channels.requests);
 
                             const embed = createEmbed({
                                 title: "Analise cancelada",
-                                description: `O administrador ${userMention(interaction.user.id)} forçou o cancelamento da analise de ${userMention(avaliator.id)} que estava analisando o bot: ${userMention(botId)} com o motivo: \`${options.getString("motivo") || "Não especificado"}\``,
+                                description: `O administrador ${userMention(interaction.user.id)} forçou o cancelamento da analise de ${userMention(analyze.userId)} que estava analisando o bot: ${userMention(analyze.applicationId!)} com o motivo: \`${options.getString("motivo") || "Não especificado"}\``,
                                 color: "Red",
-                                thumbnail: interaction.client.users.cache.get(bot.userId || avaliator.id)?.displayAvatarURL()
+                                thumbnail: interaction.client.users.cache.get(bot!.id)?.displayAvatarURL()
                             });
 
                             if (!channel || !channel?.isTextBased()) {
@@ -271,7 +283,7 @@ createCommand({
                             };
 
                             if ("send" in channel) {
-                                await channel.send({ embeds: [embed], content: userMention(bot.userId) });
+                                await channel.send({ embeds: [embed], content: userMention(bot!.userId) });
                                 interaction.editReply(res.success(`Analise cancelada com sucesso!`));
                                 return;
                             } else {
@@ -350,7 +362,7 @@ createCommand({
                     }
                     case "bots-off-kickar": {
                         await interaction.deferReply();
-                        const possibleOffline = options.getBoolean("possibleOffline", false) ?? false;
+                        const possibleOffline = options.getBoolean("possibleoffline", false) ?? false;
 
                         const guild = interaction.client.guilds.cache.get(settings.guild.principalId);
                         if (!guild) {

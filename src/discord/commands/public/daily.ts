@@ -5,7 +5,7 @@ import { ApplicationCommandType } from "discord.js";
 
 createCommand({
     name: "daily",
-    description: "receber o daily diário",
+    description: "receber o daily diario",
     type: ApplicationCommandType.ChatInput,
     async run(interaction){
         await interaction.deferReply();

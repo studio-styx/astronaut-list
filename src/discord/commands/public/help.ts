@@ -16,6 +16,8 @@ createCommand({
 
         const botCommandId = await getId("bot");
         const analisatorCommandId = await getId("analisator");
+        const permissionsCommandId = await getId("permissions");
+
         const embed = createEmbed({
             title: "Comandos",
             description: "Lista de comandos do bot",
@@ -48,6 +50,10 @@ createCommand({
                         `</analisator erros-ortograficos remover:${analisatorCommandId}> - remover um erro ortográfico do bot`,
                         `</analisator erros-ortograficos listar:${analisatorCommandId}> - listar os erros ortográficos do bot`,
                         `</analisator erros-ortograficos limpar:${analisatorCommandId}> - limpar os erros ortográficos do bot`,
+                        '',
+                        `</permissions add:${permissionsCommandId}> - adicionar permissão à alguém (apenas no servidor isolado)`,
+                        `</permissions remove:${permissionsCommandId}> - remover permissão de alguém (apenas no servidor isolado)`,
+                        `</permissions list:${permissionsCommandId}> - listar permissões de alguém (apenas no servidor isolado)`,
                     )
                 },
                 {

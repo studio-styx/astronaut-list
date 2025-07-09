@@ -37,7 +37,7 @@ createCommand({
                     autocomplete: true
                 },
                 {
-                    name: "descrição",
+                    name: "descricao",
                     description: "nova descrição do bot",
                     type: ApplicationCommandOptionType.String,
                     required: true
@@ -103,7 +103,10 @@ createCommand({
                 await interaction.deferReply();
 
                 const bot = await prisma.application.findUnique({
-                    where: { id: choice, avaliation: { not: null } },
+                    where: { id: choice, analyze: { avaliation: { not: null } } },
+                    include: {
+                        analyze: true
+                    }
                 });
 
                 if (!bot) {
@@ -116,7 +119,7 @@ createCommand({
                     { name: "Votos", value: `${bot.votes}`, inline: true },
                     { name: "Descrição", value: `\`${bot.description || "Não definida"}\`` },
                     { name: "Criado em", value: `<t:${Math.floor(bot.createdAt.getTime() / 1000)}:F>`, inline: true },
-                    { name: "Avaliação", value: `\`${bot.avaliation}\`` },
+                    { name: "Avaliação", value: `\`${bot.analyze?.avaliation}\`` },
                     { name: "Prefixo", value: `\`${bot.prefix}\``, inline: true },
                 ];
 
@@ -136,12 +139,12 @@ createCommand({
             }
             case "editar": {
                 const choice = interaction.options.getString("bot", true);
-                const description = interaction.options.getString("descrição", true);
+                const description = interaction.options.getString("descricao", true);
 
                 await interaction.deferReply();
 
                 const bot = await prisma.application.findUnique({
-                    where: { id: choice, avaliation: { not: null }, userId: interaction.user.id  },
+                    where: { id: choice, analyze: { avaliation: {not: null } }, userId: interaction.user.id  },
                 });
 
                 if (!bot) {
@@ -190,11 +193,19 @@ createCommand({
                 const bot = await prisma.application.findUnique({
                     where: {
                         id: botId
+                    },
+                    include: {
+                        analyze: true
                     }
                 });
 
                 if(!bot){
                     interaction.editReply(res.danger("Aplicação não encontrada"));
+                    return;
+                }
+
+                if (!bot.analyze ||!bot.analyze?.finishedIn) {
+                    interaction.editReply(res.danger("O bot mencionado ainda não foi analisado!"));
                     return;
                 }
 
@@ -286,7 +297,9 @@ createCommand({
 
                 const bots = await prisma.application.findMany({
                     where: {
-                        avaliation: { not: null }
+                        analyze: {
+                            avaliation: { not: null }
+                        }
                     },
                     orderBy: {
                         votes: "desc"
@@ -303,7 +316,7 @@ createCommand({
                 );
                 
                 const message = messages.join("\n");
-                interaction.editReply(res.success(message));
+                interaction.editReply(res.success(message, { title: "Ranking de votos" }));
                 return;
             }
         }

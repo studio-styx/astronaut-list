@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 createCommand({
     name: "eval",
-    description: "Executa código JavaScript, Prisma ou comandos no estilo aoi.js (apenas admins)",
+    description: "Executa código JavaScript e prisma",
     type: ApplicationCommandType.ChatInput,
     options: [
         {
