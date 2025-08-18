@@ -1,9 +1,12 @@
-import { createCommand } from "#base";
+import { createCommand, Store } from "#base";
 import { prisma } from "#database";
 import { res, searchBotsWithCache } from "#functions";
-import { settings } from "#settings";
+import { env, settings } from "#settings";
 import { createEmbed, createRow } from "@magicyan/discord";
-import { ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, TextChannel } from "discord.js";
+import axios from "axios";
+import { ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, TextChannel, time } from "discord.js";
+
+const cooldownStore = new Store<Date>();
 
 createCommand({
     name: "bot",
@@ -68,34 +71,34 @@ createCommand({
             case "info": {
                 const focused = interaction.options.getFocused();
                 const bots = await searchBotsWithCache(focused);
-                
+
                 return await interaction.respond(
                     bots.map(bot => ({ name: bot.name, value: bot.id }))
                 );
             }
-            
+
             case "editar": {
                 const focused = interaction.options.getFocused();
-                const bots = await searchBotsWithCache(focused, { 
-                    userId: interaction.user.id 
+                const bots = await searchBotsWithCache(focused, {
+                    userId: interaction.user.id
                 });
-                
+
                 return await interaction.respond(
                     bots.map(bot => ({ name: bot.name, value: bot.id }))
                 );
             }
-            
+
             case "votar": {
                 const focused = interaction.options.getFocused();
                 const bots = await searchBotsWithCache(focused);
-                
+
                 return await interaction.respond(
                     bots.map(bot => ({ name: bot.name, value: bot.id }))
                 );
             }
         }
     },
-    async run(interaction){
+    async run(interaction) {
         switch (interaction.options.getSubcommand()) {
             case "info": {
                 const choice = interaction.options.getString("bot", true);
@@ -105,7 +108,8 @@ createCommand({
                 const bot = await prisma.application.findUnique({
                     where: { id: choice, analyze: { avaliation: { not: null } } },
                     include: {
-                        analyze: true
+                        analyze: true,
+                        votes: true
                     }
                 });
 
@@ -116,14 +120,17 @@ createCommand({
 
                 const fields = [
                     { name: "Dono", value: `<@${bot.userId}>`, inline: true },
-                    { name: "Votos", value: `${bot.votes}`, inline: true },
+                    { name: "Votos", value: `${bot.votes.length}`, inline: true },
                     { name: "Descrição", value: `\`${bot.description || "Não definida"}\`` },
                     { name: "Criado em", value: `<t:${Math.floor(bot.createdAt.getTime() / 1000)}:F>`, inline: true },
                     { name: "Avaliação", value: `\`${bot.analyze?.avaliation}\`` },
                     { name: "Prefixo", value: `\`${bot.prefix}\``, inline: true },
+                    { name: "Possui comandos slash?", value: bot.hasSlashCommands ? "Sim" : "Não", inline: true }
                 ];
 
-                if (bot.prefix2) fields.push({ name: "Prefixo 2", value: `${bot.prefix2}`, inline: true });
+                if (bot.website) fields.push({ name: "Site:", value: bot.website, inline: true });
+                if (bot.github) fields.push({ name: "Github:", value: bot.github, inline: true });
+                if (bot.supportServerLink) fields.push({ name: "Servidor de suporte:", value: bot.supportServerLink, inline: true });
 
                 const embed = createEmbed({
                     title: `Informações de ${bot.name}`,
@@ -144,7 +151,7 @@ createCommand({
                 await interaction.deferReply();
 
                 const bot = await prisma.application.findUnique({
-                    where: { id: choice, analyze: { avaliation: {not: null } }, userId: interaction.user.id  },
+                    where: { id: choice, analyze: { avaliation: { not: null } }, userId: interaction.user.id },
                 });
 
                 if (!bot) {
@@ -161,7 +168,16 @@ createCommand({
                 return;
             }
             case "votar": {
+                if (cooldownStore.has(interaction.user.id)) {
+                    interaction.reply(res.danger(`Você está sendo muito rápido! volte novamente ${time(cooldownStore.get(interaction.user.id))}`));
+                    return;
+                }
+
                 await interaction.deferReply();
+
+                cooldownStore.set(interaction.user.id, new Date(Date.now() + 1000 * 60 * 2), {
+                    time: 1000 * 60 * 2
+                })
 
                 const user = await prisma.user.upsert({
                     where: {
@@ -172,7 +188,8 @@ createCommand({
                     },
                     update: {},
                     include: {
-                        cooldowns: true
+                        cooldowns: true,
+                        items: true
                     }
                 });
 
@@ -195,31 +212,102 @@ createCommand({
                         id: botId
                     },
                     include: {
-                        analyze: true
+                        analyze: true,
+                        votes: true
                     }
                 });
 
-                if(!bot){
+                if (!bot) {
                     interaction.editReply(res.danger("Aplicação não encontrada"));
                     return;
                 }
 
-                if (!bot.analyze ||!bot.analyze?.finishedIn) {
+                if (!bot.analyze || !bot.analyze?.finishedIn) {
                     interaction.editReply(res.danger("O bot mencionado ainda não foi analisado!"));
                     return;
                 }
 
                 const hasRole = interaction.member?.roles.cache.has("1348957298835587085") // 1348957298835587085 = id do cargo de booster
 
-                const [newBot] = await prisma.$transaction([
-                    prisma.application.update({
-                        where: {
-                            id: bot.id
-                        },
+                const trySendStx = async () => {
+                    try {
+                        const botCoins = await axios.get(`https://apieris.squareweb.app/v1/economy/balance`, {
+                            headers: {
+                                authorization: env.ERIS_API_KEY
+                            }
+                        })
+
+                        const priceToPay = hasRole ? 20 : 10;
+                        if (botCoins.data.money < priceToPay) return {
+                            success: false,
+                            error: "Não tenho dinheiro suficiente"
+                        }
+
+                        await axios.post("https://apieris.squareweb.app/v1/economy/give-stx", {
+                            guildId: interaction.guildId,
+                            channelId: interaction.channelId,
+                            memberId: interaction.member.id,
+                            amount: priceToPay,
+                            reason: hasRole ? `Votou como booster na aplicação ${bot.name}.` : `Votou na aplicação ${bot.name}.`
+                        }, {
+                            headers: {
+                                authorization: env.ERIS_API_KEY
+                            }
+                        });
+
+                        return {
+                            success: true
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        return {
+                            success: false,
+                            error: "Um erro misterioso me impediu de te pagar stx por esse voto."
+                        }
+                    }
+                }
+
+                // Verifica itens ativos (não expirados)
+                const getActiveItem = (id: number) =>
+                    user.items.find(item => item.id === id && (!item.expiresAt || item.expiresAt > now));
+
+                const doubleVoteItem = getActiveItem(3);
+                const has30off = getActiveItem(1);
+                const has50off = getActiveItem(2);
+
+                // Lógica de cooldown
+                const baseCooldown = 1000 * 60 * 60 * 3; // 3 horas em ms
+                let cooldownDuration = baseCooldown;
+
+                if (has50off) {
+                    cooldownDuration *= 0.5; // 50% off
+                } else if (has30off) {
+                    cooldownDuration *= 0.7; // 30% off
+                }
+
+                // Prepara operações da transação
+                const operations = [
+                    // Sempre cria pelo menos 1 voto
+                    prisma.votes.create({
                         data: {
-                            votes: { increment: hasRole ? 2 : 1 },
+                            applicationId: bot.id,
+                            userId: interaction.user.id,
+                            origin: "SERVER"
                         }
                     }),
+
+                    // Se tiver doubleVote, cria um segundo voto
+                    ...(doubleVoteItem ? [
+                        prisma.votes.create({
+                            data: {
+                                applicationId: bot.id,
+                                userId: interaction.user.id,
+                                origin: "SERVER"
+                            }
+                        })
+                    ] : []),
+
+                    // Cooldown
                     prisma.cooldown.upsert({
                         where: {
                             userId_name: {
@@ -230,23 +318,29 @@ createCommand({
                         create: {
                             userId: interaction.user.id,
                             name: "vote",
-                            endIn: new Date(now.getTime() + 1000 * 60 * 60 * 3) // 1000 * 60 * 60 * 3
+                            endIn: new Date(now.getTime() + cooldownDuration)
                         },
                         update: {
-                            endIn: new Date(now.getTime() + 1000 * 60 * 60 * 3)
+                            endIn: new Date(now.getTime() + cooldownDuration)
                         }
                     }),
-                    prisma.user.update({
-                        where: { id: interaction.user.id },
-                        data: {
-                            coins: { increment: hasRole ? 700 : 500 }
-                        }
-                    })
-                ])
+                ];
+
+                await prisma.$transaction(operations);
+
+                if (hasRole) await prisma.votes.create({
+                    data: {
+                        applicationId: bot.id,
+                        userId: interaction.user.id,
+                        origin: "SERVER"
+                    }
+                })
+
+                const result = await trySendStx();
 
                 const description = hasRole
-                    ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${newBot.votes}** votos. \n\n Você ganhou **700** planetas`
-                    : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${newBot.votes}** votos. \n\n Você ganhou **500** planetas`;
+                    ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${bot.votes.length + 2}** votos. \n\n ${result.success ? "E você recebeu **20** stx por ter votado em uma aplicação como booster!" : `Eu não consegui te pagar os 20 stx pelo motivo: **\`${result.error}\`**`}`
+                    : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${bot.votes.length + 1}** votos. \n\n ${result.success ? `E você recebeu **10** stx por ter votado em uma aplicação!` : `Eu não consegui te pagar os 10 stx pelo motivo: **\`${result.error}\`**`}`;
 
 
                 const embed = createEmbed({
@@ -277,14 +371,14 @@ createCommand({
                 )
 
                 const channel = await interaction.client.channels.fetch(settings.guild.channels.vote)
-                
+
                 if (!channel || !channel.isTextBased()) {
                     interaction.editReply(res.danger("Não foi possível enviar a notificação nos correios, "));
                     return;
                 }
 
                 const botUser = await interaction.client.users.fetch(bot.id);
-                (channel as TextChannel).send(res.success(`<@${interaction.user.id}> votou na aplicação ${bot.name} de <@${bot.userId}> ${hasRole ? "como o usuário é booster seu voto valeu 2!" : ""}, agora a aplicação tem: **${newBot.votes}** votos! \n\n ( \`Agora ele espera 3 horas pra poder votar novamente\` )`, { thumbnail: botUser.displayAvatarURL() }));
+                (channel as TextChannel).send(res.success(`<@${interaction.user.id}> votou na aplicação ${bot.name} de <@${bot.userId}> ${hasRole ? "como o usuário é booster seu voto valeu 2!" : ""}, agora a aplicação tem: **${bot.votes.length + (hasRole ? 2 : 1)}** votos! \n\n ( \`Agora ele espera 3 horas pra poder votar novamente\` )`, { thumbnail: botUser.displayAvatarURL() }));
 
                 interaction.editReply({
                     embeds: [embed],
@@ -302,7 +396,12 @@ createCommand({
                         }
                     },
                     orderBy: {
-                        votes: "desc"
+                        votes: {
+                            _count: "desc"
+                        }
+                    },
+                    include: {
+                        votes: true
                     }
                 });
 
@@ -311,10 +410,10 @@ createCommand({
                 const messages = await Promise.all(
                     bots.slice(0, 25).map(async (bot, index) => {
                         const user = await getUserInfo(bot.userId);
-                        return `${index + 1} - ( **${bot.name}** de: ${user.username} ) votos: **${bot.votes}**`;
+                        return `${index + 1} - ( **${bot.name}** de: ${user.username} ) votos: **${bot.votes.length}**`;
                     })
                 );
-                
+
                 const message = messages.join("\n");
                 interaction.editReply(res.success(message, { title: "Ranking de votos" }));
                 return;

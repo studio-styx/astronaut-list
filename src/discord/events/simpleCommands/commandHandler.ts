@@ -108,7 +108,7 @@ createEvent({
 
         if (message.author.bot) return;
         if (message.channel.type === ChannelType.DM) return;
-        if (!message.content.startsWith(settings.prefix)) return;
+        if (!message.content.startsWith(settings.prefix.toLowerCase())) return;
 
         const args = message.content.slice(settings.prefix.length).trim().split(/ +/g);
         const commandName = args.shift()?.toLowerCase();

@@ -13,6 +13,8 @@
 
 # Config files
 /firebase.json
+/threads.json
+/threads_backup.json
 
 # Extensions
 *.zip

@@ -19,23 +19,54 @@ model User {
   analisingId  Int? @unique
   coins       Int @default(0)
   analyzes    Analyze[]
+  votes       Votes[]
+  items       Item[]
 }
 
 
+model Votes {
+    id            Int        @id @default(autoincrement())
+    userId        String
+    user          User       @relation(fields: [userId], references: [id])
+    applicationId String
+    application   Application @relation(fields: [applicationId], references: [id])
+    createdAt     DateTime   @default(now())
+    origin        Origin     @default(SERVER)
+}
+
+enum Origin {
+    SERVER
+    WEBSITE
+}
+
+model Item {
+  id         Int
+  userId     String
+  quantity   Int
+  user       User @relation(fields: [userId], references: [id])
+  expiresAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  @@id([userId, id])
+}
+
 model Application {
-  id          String @id
-  userId      String
-  user        User @relation(fields: [userId], references: [id])
-  name        String
-  votes       Int @default(0)
-  language    String
-  lib         String
-  description String?
-  prefix      String
-  prefix2     String?
-  createdAt   DateTime @default(now())
-  analyzeId   Int? @unique
-  analyze     Analyze? @relation(fields: [analyzeId], references: [id])
+    id          String @id
+    userId      String
+    user        User @relation(fields: [userId], references: [id])
+    name        String
+    votes       Votes[]
+    language    String
+    lib         String
+    description String?
+    prefix      String?
+    website     String?
+    github      String?
+    supportServerLink    String?
+    hasSlashCommands     Boolean @default(false)
+    createdAt   DateTime @default(now())
+    analyzeId   Int? @unique
+    analyze     Analyze? @relation(fields: [analyzeId], references: [id])
 }
 
 model Cooldown {

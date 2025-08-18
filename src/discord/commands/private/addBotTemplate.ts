@@ -27,9 +27,9 @@ createCommand({
 
         const button = createRow(
             new ButtonBuilder({
-                customId: "botlist/addbot/1",
                 label: "Adicionar Aplicação",
-                style: ButtonStyle.Success
+                style: ButtonStyle.Link,
+                url: "https://erisbot.squareweb.app/botlist/addBot?server=devzone"
             })
         )
 
