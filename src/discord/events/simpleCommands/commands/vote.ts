@@ -87,13 +87,12 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
 
     const hasRole = message.member?.roles.cache.has("1348957298835587085") // 1348957298835587085 = id do cargo de booster
 
-    const [newBot] = await prisma.$transaction([
-        prisma.application.update({
-            where: {
-                id: bot.id
-            },
+    await prisma.$transaction([
+        prisma.votes.create({
             data: {
-                votes: { increment: hasRole ? 2 : 1 },
+                applicationId: bot.id,
+                userId: message.author.id,
+                origin: "SERVER"
             }
         }),
         prisma.cooldown.upsert({
@@ -120,10 +119,18 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
         })
     ])
 
+    const newBot = await prisma.application.findUniqueOrThrow({
+        where: {
+            id: botId
+        },
+        include: {
+            votes: true
+        }
+    });
 
     const description = hasRole
         ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${newBot.votes}** votos. \n\n Você ganhou **700** planetas`
-        : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${newBot.votes}** votos. \n\n Você ganhou **500** planetas`;
+        : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${newBot.votes.length}** votos. \n\n Você ganhou **500** planetas`;
 
     const embed = createEmbed({
         title: "Aplicação votada",

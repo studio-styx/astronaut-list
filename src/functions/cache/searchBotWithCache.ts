@@ -80,14 +80,6 @@ export async function searchBotsWithCache(
     
     console.log("Database Bots:", dbBots);
     
-    // Atualiza o cache com os novos bots encontrados
-    dbBots.forEach(bot => botCache.add({
-        ...bot,
-        id: bot.id,
-        lastUpdated: new Date(),
-        analyze: bot.analyze
-    }));
-    
     // Se avaliation === false, retorna apenas do banco para garantir consistência
     if (filterOptions.avaliation === false) {
         return dbBots;

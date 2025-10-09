@@ -17,6 +17,7 @@
   "dependencies": {
     "@magicyan/discord": "^1.4.10",
     "@prisma/client": "^6.14.0",
+    "@studiostyx/erisbot-cli": "^0.1.2",
     "axios": "^1.10.0",
     "chalk": "5.4.1",
     "discord.js": "^14.21.0",
@@ -28,7 +29,7 @@
   "devDependencies": {
     "@types/bun": "^1.2.10",
     "prisma": "^6.14.0",
-    "typescript": "5.7.2"
+    "typescript": "^5.9.3"
   },
   "imports": {
     "#database": [

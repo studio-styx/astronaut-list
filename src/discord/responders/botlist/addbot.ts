@@ -440,7 +440,6 @@ createResponder({
                             userId: interaction.user.id,
                             name: botDiscordInfo?.username!,
                             prefix: botInfo.prefix!,
-                            prefix2: botInfo.prefix2!,
                             description: botInfo.description,
                             language: botInfo.language!,
                             lib: botInfo.lib!,

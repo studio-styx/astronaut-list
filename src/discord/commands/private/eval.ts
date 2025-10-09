@@ -1,7 +1,7 @@
 import { createCommand } from "#base";
 import { res } from "#functions";
 import { settings } from "#settings";
-import { ApplicationCommandOptionType, ApplicationCommandType, GuildChannelCreateOptions } from "discord.js";
+import { ApplicationCommandOptionType, ApplicationCommandType } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -26,65 +26,6 @@ createCommand({
 
         const code = interaction.options.getString("code", true);
 
-        // Contexto no estilo aoi.js
-        const ctx = {
-            client: interaction.client,
-            guild: interaction.guild,
-            channel: interaction.channel,
-            user: interaction.user,
-            users: {
-                async ban(userId: string, reason: string = "Nenhum motivo fornecido") {
-                    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                    if (!member) throw new Error("Usuário não encontrado ou não é um membro do servidor.");
-                    await member.ban({ reason });
-                    return { success: true, userId, reason };
-                },
-                async kick(userId: string, reason: string = "Nenhum motivo fornecido") {
-                    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                    if (!member) throw new Error("Usuário não encontrado ou não é um membro do servidor.");
-                    await member.kick(reason);
-                    return { success: true, userId, reason };
-                },
-                async unban(userId: string, reason: string = "Nenhum motivo fornecido") {
-                    const bannedUsers = await interaction.guild.bans.fetch();
-                    const bannedUser = bannedUsers.find(user => user.user.id === userId);
-                    if (!bannedUser) throw new Error("Usuário não banido.");
-                    await interaction.guild.bans.remove(userId, reason);
-                    return { success: true, userId, reason };
-                },
-                async mute(userId: string, time: number = 10, reason: string = "Nenhum motivo fornecido", ) {
-                    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                    if (!member) throw new Error("Usuário não encontrado ou não é um membro do servidor.");
-                    await member.timeout(time * 1000, reason);
-                    return { success: true, userId, reason, time };
-                },
-                async unmute(userId: string, reason: string = "Nenhum motivo fornecido") {
-                    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                    if (!member) throw new Error("Usuário não encontrado ou não é um membro do servidor.");
-                    await member.timeout(null, reason);
-                    return { success: true, userId, reason };
-                },
-                async fetch(userId: string) {
-                    return await interaction.client.users.fetch(userId);
-                }
-            },
-            guilds: {
-                channels: {
-                    async create(options: GuildChannelCreateOptions) {
-                        return await interaction.guild.channels.create(options);
-                    },
-                    async fetch(channelId: string) {
-                        return await interaction.guild.channels.fetch(channelId);
-                    }
-                },
-                members: {
-                    async fetch(userId: string) {
-                        return await interaction.guild.members.fetch(userId);
-                    }
-                }
-            }
-        };
-
         await interaction.deferReply();
 
         try {
@@ -101,7 +42,7 @@ createCommand({
                 // Validação para operações Prisma
                 const prismaOperations = [
                     "findUnique", "findMany", "create", "update",
-                    "delete", "upsert", "findFirst", "count"
+                    "delete", "upsert", "findFirst", "count", "deleteMany", "updateMany"
                 ];
                 const hasValidOperation = prismaOperations.some(op => code.includes(`.${op}(`));
                 if (!hasValidOperation) {

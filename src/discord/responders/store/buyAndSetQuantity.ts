@@ -2,9 +2,9 @@ import { createResponder, ResponderType } from "#base";
 import { prisma } from "#database";
 import { res } from "#functions";
 import { menus } from "#menus";
-import { env } from "#settings";
+import { erisCli } from "#tools";
 import { createModalFields } from "@magicyan/discord";
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { TextInputStyle } from "discord.js";
 
 createResponder({
@@ -89,13 +89,9 @@ createResponder({
             await interaction.deferReply();
 
             try {
-                const userBalance = await axios.get(`https://apieris.squareweb.app/v1/economy/balance/${userId}`, {
-                    headers: {
-                        authorization: env.ERIS_API_KEY
-                    }
-                });
+                const userBalance = await erisCli.user(interaction.member.id).balance();
 
-                userMoney = userBalance.data.money;
+                userMoney = userBalance.money;
             } catch (error) {
                 console.error(error);
                 interaction.editReply(res.danger("Não foi possível verificar seu saldo!"));
@@ -109,18 +105,11 @@ createResponder({
 
             try {
                 await interaction.editReply(res.warning("Por favor aceite a solicitação!"))
-                await axios.post("https://apieris.squareweb.app/v1/economy/take-stx", {
+                await erisCli.user(interaction.member.id).takeStx({
                     guildId: interaction.guildId,
                     channelId: interaction.channelId,
-                    memberId: interaction.member.id,
                     amount: priceToPay,
-                    reason: `Compra de ${quantity} itens do item ${selectedItem.name} por ${selectedItem.price} stx cada!`
-                }, {
-                    headers: {
-                        authorization: env.ERIS_API_KEY
-                    },
-                    timeout: 80000 // 1 minuto e 20 segundos em milissegundos
-                });
+                })
 
                 const prismaItem = await prisma.item.upsert({
                     where: {

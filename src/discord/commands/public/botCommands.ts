@@ -1,9 +1,9 @@
 import { createCommand, Store } from "#base";
 import { prisma } from "#database";
 import { res, searchBotsWithCache } from "#functions";
-import { env, settings } from "#settings";
+import { settings } from "#settings";
+import { erisCli } from "#tools";
 import { createEmbed, createRow } from "@magicyan/discord";
-import axios from "axios";
 import { ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, TextChannel, time } from "discord.js";
 
 const cooldownStore = new Store<Date>();
@@ -231,29 +231,25 @@ createCommand({
 
                 const trySendStx = async () => {
                     try {
-                        const botCoins = await axios.get(`https://apieris.squareweb.app/v1/economy/balance`, {
-                            headers: {
-                                authorization: env.ERIS_API_KEY
-                            }
-                        })
-
                         const priceToPay = hasRole ? 20 : 10;
-                        if (botCoins.data.money < priceToPay) return {
-                            success: false,
-                            error: "Não tenho dinheiro suficiente"
-                        }
-
-                        await axios.post("https://apieris.squareweb.app/v1/economy/give-stx", {
+                        const data = {
                             guildId: interaction.guildId,
                             channelId: interaction.channelId,
                             memberId: interaction.member.id,
                             amount: priceToPay,
                             reason: hasRole ? `Votou como booster na aplicação ${bot.name}.` : `Votou na aplicação ${bot.name}.`
-                        }, {
-                            headers: {
-                                authorization: env.ERIS_API_KEY
+                        }
+
+                        const botMoney = (await erisCli.me().balance()).money;
+
+                        if (botMoney < priceToPay) {
+                            return {
+                                success: false,
+                                error: "Eu não tenho dinheiro suficiente para te pagar!"
                             }
-                        });
+                        }
+
+                        await erisCli.user(interaction.member.id).addStx(data);
 
                         return {
                             success: true
