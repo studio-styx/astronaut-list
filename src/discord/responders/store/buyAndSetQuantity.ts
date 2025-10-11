@@ -91,6 +91,11 @@ createResponder({
             try {
                 const userBalance = await erisCli.user(interaction.member.id).balance();
 
+                if (!userBalance) {
+                    interaction.editReply(res.danger("Não foi possível verificar seu saldo!"));
+                    return;
+                }
+
                 userMoney = userBalance.money;
             } catch (error) {
                 console.error(error);
@@ -105,11 +110,19 @@ createResponder({
 
             try {
                 await interaction.editReply(res.warning("Por favor aceite a solicitação!"))
-                await erisCli.user(interaction.member.id).takeStx({
+                const tx = await erisCli.user(interaction.member.id).takeStx({
                     guildId: interaction.guildId,
                     channelId: interaction.channelId,
                     amount: priceToPay,
-                })
+                    expiresAt: "1m"
+                });
+
+                const result = await tx.waitForConfirmation();
+
+                if (result !== "APPROVED") {
+                    interaction.editReply(res.danger("Você recusou a solicitação!"));
+                    return;
+                }
 
                 const prismaItem = await prisma.item.upsert({
                     where: {

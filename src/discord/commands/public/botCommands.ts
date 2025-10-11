@@ -229,36 +229,49 @@ createCommand({
 
                 const hasRole = interaction.member?.roles.cache.has("1348957298835587085") // 1348957298835587085 = id do cargo de booster
 
-                const trySendStx = async () => {
+                const trySendStx = async (): Promise<{ success: true } | { success: false; message: string }> => {
+                    const valueToPay = 20
+
                     try {
-                        const priceToPay = hasRole ? 20 : 10;
-                        const data = {
-                            guildId: interaction.guildId,
+                        const tx = await erisCli.user(interaction.user.id).giveStx({
+                            amount: valueToPay,
                             channelId: interaction.channelId,
-                            memberId: interaction.member.id,
-                            amount: priceToPay,
-                            reason: hasRole ? `Votou como booster na aplicação ${bot.name}.` : `Votou na aplicação ${bot.name}.`
+                            guildId: interaction.guildId,
+                            reason: `Votou na aplicação ${bot.name}.`,
+                            expiresAt: "1m"
+                        });
+
+                        await interaction.editReply(res.warning(`Por favor aceite a transação`));
+
+                        const result = await tx.waitForConfirmation();
+
+                        if (result === "REJECTED") return {
+                            success: false,
+                            message: "Você recusou a transação!"
                         }
 
-                        const botMoney = (await erisCli.me().balance()).money;
-
-                        if (botMoney < priceToPay) {
-                            return {
-                                success: false,
-                                error: "Eu não tenho dinheiro suficiente para te pagar!"
-                            }
+                        if (result === "EXPIRED") return {
+                            success: false,
+                            message: "A transação expirou!"
                         }
 
-                        await erisCli.user(interaction.member.id).addStx(data);
+                        if (result === "DELETED") return {
+                            success: false,
+                            message: "Um erro na api resultou na exclusão total dessa transação!"
+                        }
 
                         return {
-                            success: true
+                            success: true,
                         }
                     } catch (error) {
-                        console.error(error);
+                        console.error("Erro ao pagar o usuário:", error);
+                        if (typeof error === "string" && error.includes("Not enough money")) return {
+                            success: false,
+                            message: "Eu não tenho stx suficiente para te pagar!"
+                        }
                         return {
                             success: false,
-                            error: "Um erro misterioso me impediu de te pagar stx por esse voto."
+                            message: "Um erro misterioso me impediu de pagar o usuário"
                         }
                     }
                 }
@@ -335,8 +348,8 @@ createCommand({
                 const result = await trySendStx();
 
                 const description = hasRole
-                    ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${bot.votes.length + 2}** votos. \n\n ${result.success ? "E você recebeu **20** stx por ter votado em uma aplicação como booster!" : `Eu não consegui te pagar os 20 stx pelo motivo: **\`${result.error}\`**`}`
-                    : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${bot.votes.length + 1}** votos. \n\n ${result.success ? `E você recebeu **10** stx por ter votado em uma aplicação!` : `Eu não consegui te pagar os 10 stx pelo motivo: **\`${result.error}\`**`}`;
+                    ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${bot.votes.length + 2}** votos. \n\n ${result.success ? "E você recebeu **20** stx por ter votado em uma aplicação como booster!" : `Eu não consegui te pagar os 20 stx pelo motivo: **\`${result.message}\`**`}`
+                    : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${bot.votes.length + 1}** votos. \n\n ${result.success ? `E você recebeu **10** stx por ter votado em uma aplicação!` : `Eu não consegui te pagar os 10 stx pelo motivo: **\`${result.message}\`**`}`;
 
 
                 const embed = createEmbed({

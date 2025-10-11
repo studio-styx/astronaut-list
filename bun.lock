@@ -6,7 +6,7 @@
       "dependencies": {
         "@magicyan/discord": "^1.4.10",
         "@prisma/client": "^6.14.0",
-        "@studiostyx/erisbot-cli": "^0.1.2",
+        "@studiostyx/erisbot-cli": "^0.1.4",
         "axios": "^1.10.0",
         "chalk": "5.4.1",
         "discord.js": "^14.21.0",
@@ -67,7 +67,7 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.0.0", "", {}, "sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA=="],
 
-    "@studiostyx/erisbot-cli": ["@studiostyx/erisbot-cli@0.1.2", "", {}, "sha512-6IGvDBhSVBHC7/G2hqHsfIZ3KJ2t+QWiRsL3SMklyArqb3LOLhBll5tboJjuhn1vOORReidz9HPOR9so1nHueg=="],
+    "@studiostyx/erisbot-cli": ["@studiostyx/erisbot-cli@0.1.4", "", {}, "sha512-HqGexoxFj2OepKV5h6CveQA7ET/dY9mR+GQ2D8nkUCbq/W6qF0I8HY4Yt8hEZ+0ONTidKnM9VBohUr4GcwV7Hw=="],
 
     "@types/bun": ["@types/bun@1.2.15", "", { "dependencies": { "bun-types": "1.2.15" } }, "sha512-U1ljPdBEphF0nw1MIk0hI7kPg7dFdPyM7EenHsp6W5loNHl7zqy6JQf/RKCgnUn2KDzUpkBwHPnEJEjII594bA=="],
 

@@ -10,14 +10,12 @@
     "watch": "bun --watch --env-file .env ./src/index.ts",
     "watch:dev": "bun --watch --env-file .env.dev ./src/index.ts",
     "start": "node --env-file .env ./build/index.js",
-    "start:dev": "bun --env-file .env.dev .",
-    "prestart": "prisma migrate deploy",
-    "postinstall": "prisma generate"
+    "start:dev": "bun --env-file .env.dev ."
   },
   "dependencies": {
-    "@magicyan/discord": "^1.4.10",
-    "@prisma/client": "^6.14.0",
-    "@studiostyx/erisbot-cli": "^0.1.2",
+    "@magicyan/discord": "1.4.11",
+    "@prisma/client": "6.17.1",
+    "@studiostyx/erisbot-cli": "^0.2.5",
     "axios": "^1.10.0",
     "chalk": "5.4.1",
     "discord.js": "^14.21.0",
@@ -28,7 +26,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.2.10",
-    "prisma": "^6.14.0",
+    "prisma": "6.17.1",
     "typescript": "^5.9.3"
   },
   "imports": {
@@ -60,5 +58,6 @@
       "./emojis.json"
     ]
   },
-  "baseVersion": "1.2.8"
+  "baseVersion": "1.2.8",
+  "packageManager": "yarn@4.10.3"
 }

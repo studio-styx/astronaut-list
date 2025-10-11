@@ -2,6 +2,7 @@ import { Store } from "#base";
 import { prisma } from "#database";
 import { res } from "#functions";
 import { settings } from "#settings";
+import { erisCli } from "#tools";
 import { createEmbed, createRow } from "@magicyan/discord";
 import { ButtonBuilder, ButtonStyle, Message, OmitPartialGroupDMChannel, TextChannel } from "discord.js";;
 
@@ -29,7 +30,7 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
     });
 
     const botarg = args[0] || user.defaultVote;
-    
+
     if (!botarg) {
         message.reply(res.danger("Você precisa mencionar um bot!"));
         return;
@@ -85,6 +86,54 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
         return;
     }
 
+    const msg = await message.reply(res.warning(`Por favor aceite a transação`));
+
+    const tryPayUser = async (): Promise<{ success: true } | { success: false; message: string }> => {
+        const valueToPay = 20
+
+        try {
+            const tx = await erisCli.user(message.author.id).giveStx({
+                amount: valueToPay,
+                channelId: message.channelId,
+                guildId: message.guildId!,
+                reason: `Votou na aplicação ${bot.name}.`,
+                expiresAt: "1m"
+            });
+
+
+            const result = await tx.waitForConfirmation();
+
+            if (result === "REJECTED") return {
+                success: false,
+                message: "Você recusou a transação!"
+            }
+
+            if (result === "EXPIRED") return {
+                success: false,
+                message: "A transação expirou!"
+            }
+
+            if (result === "DELETED") return {
+                success: false,
+                message: "Um erro na api resultou na exclusão total dessa transação!"
+            }
+
+            return {
+                success: true,
+            }
+        } catch (error) {
+            console.error("Erro ao pagar o usuário:", error);
+            if (typeof error === "string" && error.includes("Not enough money")) return {
+                success: false,
+                message: "Eu não tenho stx suficiente para te pagar!"
+            }
+            return {
+                success: false,
+                message: "Um erro misterioso me impediu de pagar o usuário"
+            }
+        }
+    }
+
     const hasRole = message.member?.roles.cache.has("1348957298835587085") // 1348957298835587085 = id do cargo de booster
 
     await prisma.$transaction([
@@ -128,9 +177,11 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
         }
     });
 
+    const result = await tryPayUser();
+
     const description = hasRole
-        ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${newBot.votes}** votos. \n\n Você ganhou **700** planetas`
-        : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${newBot.votes.length}** votos. \n\n Você ganhou **500** planetas`;
+        ? `Você votou na aplicação ${bot.name} de <@${bot.userId}>, como você é booster do server o bot ganhou **2** votos! agora ele possui **${newBot.votes.length + 2}** votos. \n\n ${result.success ? "E você recebeu **20** stx por ter votado em uma aplicação como booster!" : `Eu não consegui te pagar os 20 stx pelo motivo: **\`${result.message}\`**`}`
+        : `Você votou na aplicação ${bot.name} de <@${bot.userId}>, que agora possui **${newBot.votes.length + 1}** votos. \n\n ${result.success ? `E você recebeu **10** stx por ter votado em uma aplicação!` : `Eu não consegui te pagar os 10 stx pelo motivo: **\`${result.message}\`**`}`;
 
     const embed = createEmbed({
         title: "Aplicação votada",
@@ -160,7 +211,7 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
     )
 
     const channel = await message.client.channels.fetch(settings.guild.channels.vote)
-    
+
     if (!channel || !channel.isTextBased()) {
         message.reply(res.danger("Não foi possível enviar a notificação nos correios, "));
         return;
@@ -169,7 +220,7 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
     const botUser = await message.client.users.fetch(bot.id);
     (channel as TextChannel).send(res.success(`<@${message.author.id}> votou na aplicação ${bot.name} de <@${bot.userId}> ${hasRole ? "como o usuário é booster seu voto valeu 2!" : ""}, agora a aplicação tem: **${newBot.votes}** votos! \n\n ( \`Agora ele espera 3 horas pra poder votar novamente\` )`, { thumbnail: botUser.displayAvatarURL() }));
 
-    message.reply({
+    await msg.edit({
         embeds: [embed],
         components: [components]
     })
