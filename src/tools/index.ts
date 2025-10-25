@@ -1,3 +1,3 @@
-import ErisApiCli from "@studiostyx/erisbot-cli";
+import ErisApiCli from "@studiostyx/erisbot-sdk";
 
-export const erisCli = new ErisApiCli(process.env.ERIS_API_KEY!);
+export const erisSdk = new ErisApiCli(process.env.ERIS_API_KEY!);

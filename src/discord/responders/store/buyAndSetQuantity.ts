@@ -2,7 +2,7 @@ import { createResponder, ResponderType } from "#base";
 import { prisma } from "#database";
 import { res } from "#functions";
 import { menus } from "#menus";
-import { erisCli } from "#tools";
+import { erisSdk } from "#tools";
 import { createModalFields } from "@magicyan/discord";
 import { AxiosError } from "axios";
 import { TextInputStyle } from "discord.js";
@@ -89,14 +89,14 @@ createResponder({
             await interaction.deferReply();
 
             try {
-                const userBalance = await erisCli.user(interaction.member.id).balance();
+                const userBalance = await erisSdk.users.get(interaction.member.id).balance.get();
 
                 if (!userBalance) {
                     interaction.editReply(res.danger("Não foi possível verificar seu saldo!"));
                     return;
                 }
 
-                userMoney = userBalance.money;
+                userMoney = userBalance;
             } catch (error) {
                 console.error(error);
                 interaction.editReply(res.danger("Não foi possível verificar seu saldo!"));
@@ -110,14 +110,14 @@ createResponder({
 
             try {
                 await interaction.editReply(res.warning("Por favor aceite a solicitação!"))
-                const tx = await erisCli.user(interaction.member.id).takeStx({
+                const tx = await erisSdk.users.get(interaction.member.id).balance.receive({
                     guildId: interaction.guildId,
                     channelId: interaction.channelId,
                     amount: priceToPay,
                     expiresAt: "1m"
                 });
 
-                const result = await tx.waitForConfirmation();
+                const result = await tx.waitForCompletion();
 
                 if (result !== "APPROVED") {
                     interaction.editReply(res.danger("Você recusou a solicitação!"));

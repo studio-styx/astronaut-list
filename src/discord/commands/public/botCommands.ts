@@ -2,7 +2,7 @@ import { createCommand, Store } from "#base";
 import { prisma } from "#database";
 import { res, searchBotsWithCache } from "#functions";
 import { settings } from "#settings";
-import { erisCli } from "#tools";
+import { erisSdk } from "#tools";
 import { createEmbed, createRow } from "@magicyan/discord";
 import { ApplicationCommandOptionType, ApplicationCommandType, ButtonBuilder, ButtonStyle, TextChannel, time } from "discord.js";
 
@@ -233,7 +233,7 @@ createCommand({
                     const valueToPay = 20
 
                     try {
-                        const tx = await erisCli.user(interaction.user.id).giveStx({
+                        const tx = await erisSdk.users.get(interaction.user.id).balance.give({
                             amount: valueToPay,
                             channelId: interaction.channelId,
                             guildId: interaction.guildId,
@@ -243,7 +243,7 @@ createCommand({
 
                         await interaction.editReply(res.warning(`Por favor aceite a transação`));
 
-                        const result = await tx.waitForConfirmation();
+                        const result = await tx.waitForCompletion();
 
                         if (result === "REJECTED") return {
                             success: false,

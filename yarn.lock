@@ -179,10 +179,10 @@
   resolved "https://registry.yarnpkg.com/@standard-schema/spec/-/spec-1.0.0.tgz#f193b73dc316c4170f2e82a881da0f550d551b9c"
   integrity sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==
 
-"@studiostyx/erisbot-cli@^0.2.5":
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/@studiostyx/erisbot-cli/-/erisbot-cli-0.2.5.tgz#c5e07ecb7146909abb2955e5ccfe2af4026b2cd5"
-  integrity sha512-ysn+Oy8t0hy5XFfwETYnaDl2vbebyW6siVh0gbgVjWs1R7gyTn23HgIdpGE/iSM/4aUWa/7oOkw9tILi2b0fxg==
+"@studiostyx/erisbot-sdk@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@studiostyx/erisbot-sdk/-/erisbot-sdk-1.0.1.tgz#80ded47f1abc50d70c9dad34c2537054bb54a38b"
+  integrity sha512-swzXWnN6ubcRQw7xPkTyFxiWAjZY4UotjXLjIHK4Ev3FOA1MyBIMVIYl2Xn4/P41wQEvc3VvI1zAAw0gXEUenw==
   dependencies:
     axios "^1.12.2"
 

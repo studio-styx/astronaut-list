@@ -9,9 +9,9 @@
 
     // Language and environment options
     "lib": ["ESNext"],
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "node",
+		"target": "ESNext",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 
     // Linting options
     "noUnusedLocals": true,

@@ -2,7 +2,7 @@ import { Store } from "#base";
 import { prisma } from "#database";
 import { res } from "#functions";
 import { settings } from "#settings";
-import { erisCli } from "#tools";
+import { erisSdk } from "#tools";
 import { createEmbed, createRow } from "@magicyan/discord";
 import { ButtonBuilder, ButtonStyle, Message, OmitPartialGroupDMChannel, TextChannel } from "discord.js";;
 
@@ -92,7 +92,7 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
         const valueToPay = 20
 
         try {
-            const tx = await erisCli.user(message.author.id).giveStx({
+            const tx = await erisSdk.users.get(message.author.id).balance.give({
                 amount: valueToPay,
                 channelId: message.channelId,
                 guildId: message.guildId!,
@@ -101,7 +101,7 @@ export async function vote(message: OmitPartialGroupDMChannel<Message<boolean>>,
             });
 
 
-            const result = await tx.waitForConfirmation();
+            const result = await tx.waitForCompletion();
 
             if (result === "REJECTED") return {
                 success: false,

@@ -15,7 +15,7 @@
   "dependencies": {
     "@magicyan/discord": "1.4.11",
     "@prisma/client": "6.17.1",
-    "@studiostyx/erisbot-cli": "^0.2.5",
+    "@studiostyx/erisbot-sdk": "^1.0.1",
     "axios": "^1.10.0",
     "chalk": "5.4.1",
     "discord.js": "^14.21.0",
